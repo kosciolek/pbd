@@ -1,4 +1,3 @@
-
 DROP TABLE IF EXISTS product;
 create table product
 (
@@ -80,6 +79,8 @@ create table const
     expensive_reservation_price  DECIMAL(18, 2) NOT NULL DEFAULT 200 CHECK (expensive_reservation_price > 0),
 
     default_seats                INT            NOT NULL DEFAULT 16,
+
+    amount_of_seats              INT            NOT NULL DEFAULT 12,
 );
 
 drop table if EXISTS discount;
@@ -136,28 +137,16 @@ create table reservation
     order_id   INT      NOT NULL FOREIGN KEY REFERENCES orders (id),
     start_time datetime NOT NULL DEFAULT GETDATE(),
     end_time   datetime NOT NULL DEFAULT DATEADD(hour, 2, GETDATE()),
+    seats      INT      NOT NULL DEFAULT 1,
     CONSTRAINT end_time_bigger_than_start_time CHECK (end_time > start_time)
 );
 
-DROP TABLE IF EXISTS seat;
-CREATE TABLE seat
+DROP TABLE IF EXISTS seat_limit_override;
+CREATE TABLE seat_limit_override
 (
-    id   INT PRIMARY KEY,
+    day        DATE PRIMARY KEY,
+    seat_limit INT NOT NULL,
 )
-
-DROP TABLE IF EXISTS seat_availability;
-CREATE TABLE seat_availability
-(
-    seat_id INT NOT NULL FOREIGN KEY REFERENCES seat(id),
-    date DATE NOT NULL
-)
-
-DROP TABLE IF EXISTS reservation_seats;
-CREATE TABLE reservation_seats
-(
-    seat_id        INT NOT NULL FOREIGN KEY REFERENCES seat(id),
-    reservation_id INT NOT NULL FOREIGN KEY REFERENCES reservation (id),
-);
 
 drop table if EXISTS seafood_allowed_early_const;
 create table seafood_allowed_early_const
@@ -170,13 +159,3 @@ INSERT INTO seafood_allowed_early_const
 VALUES ('thursday'),
        ('friday'),
        ('saturday');
-
-/*DROP FUNCTION IF EXISTS get_c;
-CREATE FUNCTION get_client (
-    @seat_id UNIQUEIDENTIFIER,
-    @date DATE
-)
-RETURNS BIT
-AS BEGIN
-RETURN
-    END*/
