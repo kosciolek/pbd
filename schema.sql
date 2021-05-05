@@ -7,13 +7,12 @@ create table product
     tax_percent   DECIMAL(4, 2)  NOT NULL CHECK (tax_percent BETWEEN 0 AND 1),
 );
 
-DROP TABLE IF EXISTS product_per_day;
-CREATE TABLE product_per_day
+DROP TABLE IF EXISTS product_availability;
+CREATE TABLE product_availability
 (
-    product_id INT            NOT NULL FOREIGN KEY REFERENCES product (id),
+    product_id INT            NOT NULL PRIMARY KEY FOREIGN KEY REFERENCES product (id),
     price      DECIMAL(18, 2) NOT NULL CHECK (price > 0),
     date       DATE           NOT NULL DEFAULT GETDATE(),
-    active     bit            NOT NULL DEFAULT 1,
 );
 
 drop table if EXISTS address;
@@ -29,33 +28,33 @@ CREATE TABLE address
 drop table if EXISTS client;
 create table client
 (
-    id                 UNIQUEIDENTIFIER DEFAULT newid() PRIMARY KEY,
+    id                 INT IDENTITY(1, 1) PRIMARY KEY,
     default_address_id int foreign key REFERENCES address (id),
 );
 
 drop table if EXISTS client_person;
 CREATE TABLE client_person
 (
-    id           UNIQUEIDENTIFIER PRIMARY KEY FOREIGN KEY REFERENCES client (id),
+    id           INT PRIMARY KEY FOREIGN KEY REFERENCES client (id),
     first_name   varchar(255) NOT NULL,
     second_name  varchar(255) NOT NULL,
-    phone_number varchar(255) CHECK (LEN(phone_number) = 9),
+    phone_number varchar(9) CHECK (LEN(phone_number) = 9),
 );
 
 drop table if EXISTS client_company;
 CREATE TABLE client_company
 (
-    id           UNIQUEIDENTIFIER PRIMARY KEY FOREIGN KEY REFERENCES client (id),
+    id           INT PRIMARY KEY FOREIGN KEY REFERENCES client (id),
     name         varchar(255) NOT NULL,
-    phone_number varchar(255) NOT NULL CHECK (LEN(phone_number) = 9),
-    nip          VARCHAR(255) NOT NULL CHECK (LEN(nip) = 10),
+    phone_number varchar(9) NOT NULL CHECK (LEN(phone_number) = 9),
+    nip          VARCHAR(10) NOT NULL CHECK (LEN(nip) = 10),
 );
 
 DROP TABLE IF EXISTS client_employee;
 CREATE TABLE client_employee
 (
-    id           UNIQUEIDENTIFIER default newid() PRIMARY KEY,
-    company_id   UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES client_company (id),
+    id           INT IDENTITY(1, 1) PRIMARY KEY,
+    company_id   INT NOT NULL FOREIGN KEY REFERENCES client_company (id),
     first_name   varchar(255)     NOT NULL,
     second_name  varchar(255)     NOT NULL,
     phone_number varchar(255) CHECK (LEN(phone_number) = 9),
@@ -83,12 +82,14 @@ create table const
     amount_of_seats              INT            NOT NULL DEFAULT 12,
 );
 
+
+-- TODO a trigger that checks the discount can be made
 drop table if EXISTS discount;
 create table discount
 (
     id               int IDENTITY (1, 1) PRIMARY KEY,
     date_start       DATETIME         NOT NULL,
-    client_person_id UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES client_person (id),
+    client_person_id INT NOT NULL FOREIGN KEY REFERENCES client_person (id),
 );
 
 drop table if EXISTS orders; -- should be singular, but 'order' is a keyword
@@ -97,8 +98,8 @@ create table orders
     id               int IDENTITY (1, 1) PRIMARY KEY,
     placed_at        datetime         NOT NULL DEFAULT GETDATE(),
 
-    order_owner_id   UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES client (id),
-
+    order_owner_id   INT NOT NULL FOREIGN KEY REFERENCES client (id),
+    -- TODO a trigger to check that
 
     accepted         bit              NOT NULL DEFAULT 0,
     rejection_time   datetime,
@@ -107,10 +108,10 @@ create table orders
 
 
 -- If a company places an order for its employees...
-DROP TABLE IF EXISTS order_associated_client;
+DROP TABLE IF EXISTS order_associated_employee;
 CREATE TABLE order_associated_employee
 (
-    employee_id UNIQUEIDENTIFIER NOT NULL FOREIGN KEY REFERENCES client_employee (id),
+    employee_id INT NOT NULL FOREIGN KEY REFERENCES client_employee (id),
     order_id    INT              NOT NULL FOREIGN KEY REFERENCES orders (id),
 )
 
@@ -126,8 +127,8 @@ create table delivery
 (
     address_id              int FOREIGN KEY REFERENCES address (id), -- null means order owner's default address
     order_id                INT NOT NULL FOREIGN KEY REFERENCES orders (id),
-    preferred_delivery_time datetime,                                -- null means ASAP -- HIGHER than the order's placed_at
-    delivered_time          datetime,                                -- greater than order's placed_at -- HIGHER than the order's placed_at
+    preferred_delivery_time datetime,                                -- null means ASAP -- TODO check that HIGHER than the order's placed_at
+    delivered_time          datetime,                                -- TODO check that HIGHER than the order's placed_at
 );
 
 drop table if EXISTS reservation;
