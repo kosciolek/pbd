@@ -84,11 +84,13 @@ create table const
 
 
 -- TODO a trigger that checks the discount can be made
+-- the user has spent enough money
+-- the user does not have already a discount appliued
 drop table if EXISTS discount;
 create table discount
 (
     id               int IDENTITY (1, 1) PRIMARY KEY,
-    date_start       DATETIME         NOT NULL,
+    date_start       DATE         NOT NULL,
     client_person_id INT NOT NULL FOREIGN KEY REFERENCES client_person (id),
 );
 
@@ -115,6 +117,7 @@ CREATE TABLE order_associated_employee
     order_id    INT              NOT NULL FOREIGN KEY REFERENCES orders (id),
 )
 
+-- TODO TRIGGER - jesli sa owoce, to mozna max do poniedzialku poprzedzajacego zamowienie
 drop table if EXISTS order_product;
 create table order_product
 (
