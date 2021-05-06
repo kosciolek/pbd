@@ -10,9 +10,11 @@ create table product
 DROP TABLE IF EXISTS product_availability;
 CREATE TABLE product_availability
 (
-    product_id INT            NOT NULL PRIMARY KEY FOREIGN KEY REFERENCES product (id),
+    product_id INT            NOT NULL FOREIGN KEY REFERENCES product (id),
     price      DECIMAL(18, 2) NOT NULL CHECK (price > 0),
     date       DATE           NOT NULL DEFAULT GETDATE(),
+
+    CONSTRAINT UNIQUE (product_id, date)
 );
 
 
@@ -255,6 +257,27 @@ CREATE OR ALTER TRIGGER trCheckOnlyOneClientLinked_company
         END;
 GO
 
+-- Assert that every ordered product is available that day
+CREATE OR ALTER TRIGGER trProductAvailable
+    ON order_product
+    AFTER INSERT, UPDATE
+    AS
+    SET NOCOUNT ON;
+
+    DECLARE
+        @order_date DATE
+    SELECT @order_date = (SELECT CONVERT(DATE, placed_at) from [order] o where o.id = inserted.order_id);
+
+    if NOT EXISTS(SELECT product_id
+                  FROM product_availability
+                  WHERE date = @order_date)
+        BEGIN
+            RAISERROR ('A client can be only linked to one client_person or one client_company at once.', 16, 1);
+            ROLLBACK TRANSACTION;
+        END;
+    return
+GO
+
 -- VIEWS
 
 CREATE OR ALTER VIEW unaccepted_orders
@@ -264,14 +287,37 @@ FROM [order] o
          LEFT JOIN reservation r on o.id = r.order_id
 WHERE o.accepted = 0;
 
+CREATE OR ALTER VIEW products_per_order
+AS
+SELECT o.id AS "order_id", p.name
+FROM [order] o
+         LEFT JOIN order_product op on o.id = op.order_id
+         LEFT JOIN product p ON op.product_id = p.id
+
+CREATE OR ALTER VIEW order_price
+AS
+SELECT o.id AS "order_id", o.order_owner_id as "client_id", o.placed_at, SUM(pa.price) as "price"
+FROM [order] o
+         LEFT JOIN order_product op on o.id = op.order_id
+         LEFT JOIN product_availability pa on (op.product_id = pa.product_id AND CONVERT(DATE, o.placed_at) = pa.date)
+GROUP BY o.id, o.placed_at, o.order_owner_id;
 
 -- todo test
 CREATE OR ALTER VIEW company_spendings
 AS
-SELECT o.placed_at, SUM(pa.price)
+SELECT cc.id, cc.name, cc.nip, op.placed_at, price
 FROM client_company cc
-         LEFT join client c on cc.id = c.id
-         LEFT JOIN [order] o on c.id = o.order_owner_id
-         LEFT JOIN order_product op on o.id = op.order_id
-         LEFT JOIN product_availability pa on (op.product_id = pa.product_id AND CONVERT(DATE, o.placed_at) = pa.date)
-GROUP BY o.placed_at;
+         LEFT JOIN order_price op ON op.client_id = cc.id
+
+CREATE OR ALTER VIEW company_spendings_per_month
+AS
+SELECT cs.name, cs.nip, SUM(cs.price)
+from company_spendings cs
+GROUP BY cs.nip, cs.name, DATEPART(Year, cs.placed_at), DATEPART(Month, cs.placed_at);
+
+
+CREATE OR ALTER VIEW products_available_per_day
+AS
+SELECT p.name, pa.date
+FROM product_availability pa
+         LEFT JOIN product p ON p.id = pa.product_id;
