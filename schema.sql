@@ -272,7 +272,7 @@ CREATE OR ALTER TRIGGER trProductAvailable
                   FROM product_availability
                   WHERE date = @order_date)
         BEGIN
-            RAISERROR ('A client can be only linked to one client_person or one client_company at once.', 16, 1);
+            RAISERROR ('A product may only be ordered when it is available.', 16, 1);
             ROLLBACK TRANSACTION;
         END;
     return
