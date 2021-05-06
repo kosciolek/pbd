@@ -61,15 +61,16 @@ create table const
     r2                           decimal(4, 2)  NOT NULL DEFAULT 0.05 CHECK (r2 BETWEEN 0 AND 1), -- percent
     d1                           int            NOT NULL DEFAULT 7,
 
-    min_people_reservation       INT            NOT NULL DEFAULT 2,
-
     min_orders_cheap_reservation int            NOT NULL DEFAULT 5,
     cheap_reservation_price      DECIMAL(18, 2) NOT NULL DEFAULT 50 CHECK (cheap_reservation_price > 0),
     expensive_reservation_price  DECIMAL(18, 2) NOT NULL DEFAULT 200 CHECK (expensive_reservation_price > 0),
 
-    default_seats                INT            NOT NULL DEFAULT 16,
-
     amount_of_seats              INT            NOT NULL DEFAULT 12,
+
+    -- ensure only one row exists
+    Lock                         char(1)        not null DEFAULT 'X',
+    constraint PK_T1 PRIMARY KEY (Lock),
+    constraint CK_T1_Locked CHECK (Lock = 'X')
 );
 INSERT INTO const DEFAULT
 VALUES;
@@ -85,6 +86,8 @@ create table discount
     client_person_id INT  NOT NULL FOREIGN KEY REFERENCES client_person (id),
 );
 
+
+-- TODO check that ordered product is available today
 drop table if EXISTS [order];
 create table [order]
 (
@@ -123,12 +126,9 @@ create table order_product
 drop table if EXISTS reservation;
 create table reservation
 (
-    id         INT IDENTITY (1, 1) PRIMARY KEY,
-    order_id   INT      NOT NULL FOREIGN KEY REFERENCES [order] (id),
-    start_time datetime NOT NULL DEFAULT GETDATE(),
-    end_time   datetime NOT NULL DEFAULT DATEADD(hour, 2, GETDATE()),
-    seats      INT      NOT NULL DEFAULT 1,
-    CONSTRAINT end_time_bigger_than_start_time CHECK (end_time > start_time)
+    order_id         INT NOT NULL FOREIGN KEY REFERENCES [order] (id),
+    duration_minutes INT NOT NULL DEFAULT 90,
+    seats            INT NOT NULL DEFAULT 2 CHECK (seats >= 2),
 );
 
 DROP TABLE IF EXISTS seat_limit_override;
@@ -151,8 +151,23 @@ VALUES ('thursday'),
        ('saturday');
 
 
--- STORED PROCEDURES
 GO;
+-- FUNCTIONS
+CREATE OR
+ALTER FUNCTION dbo.getMaxSeatsForDate(@date DATE)
+    RETURNS INT AS
+BEGIN
+    DECLARE @result INT;
+    SELECT @result = (SELECT seat_limit FROM seat_limit_override WHERE day = @date);
+    IF @result IS NULL
+        SELECT @result = (SELECT amount_of_seats FROM const);
+    RETURN @result;
+END
+GO;
+
+-- STORED PROCEDURES
+GO
+;
 -- Helps to insert a client_person, automatically creating a client for it
 CREATE OR
 ALTER PROCEDURE insert_client_person @first_name varchar(255),
@@ -239,3 +254,24 @@ CREATE OR ALTER TRIGGER trCheckOnlyOneClientLinked_company
             RETURN
         END;
 GO
+
+-- VIEWS
+
+CREATE OR ALTER VIEW unaccepted_orders
+AS
+SELECT *
+FROM [order] o
+         LEFT JOIN reservation r on o.id = r.order_id
+WHERE o.accepted = 0;
+
+
+-- todo test
+CREATE OR ALTER VIEW company_spendings
+AS
+SELECT o.placed_at, SUM(pa.price)
+FROM client_company cc
+         LEFT join client c on cc.id = c.id
+         LEFT JOIN [order] o on c.id = o.order_owner_id
+         LEFT JOIN order_product op on o.id = op.order_id
+         LEFT JOIN product_availability pa on (op.product_id = pa.product_id AND CONVERT(DATE, o.placed_at) = pa.date)
+GROUP BY o.placed_at;
