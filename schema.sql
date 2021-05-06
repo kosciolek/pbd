@@ -14,7 +14,7 @@ CREATE TABLE product_availability
     price      DECIMAL(18, 2) NOT NULL CHECK (price > 0),
     date       DATE           NOT NULL DEFAULT GETDATE(),
 
-    CONSTRAINT UNIQUE (product_id, date)
+    CONSTRAINT product_id_date_unique UNIQUE (product_id, date)
 );
 
 
@@ -225,6 +225,7 @@ CREATE OR ALTER TRIGGER trCheckOnlyOneClientLinked_client
     ON client_person
     AFTER INSERT, UPDATE
     AS
+BEGIN
     SET NOCOUNT ON;
 
     IF EXISTS(SELECT *
@@ -237,12 +238,14 @@ CREATE OR ALTER TRIGGER trCheckOnlyOneClientLinked_client
             ROLLBACK TRANSACTION;
             RETURN
         END;
+END;
 GO
 
 CREATE OR ALTER TRIGGER trCheckOnlyOneClientLinked_company
     ON client_company
     AFTER INSERT, UPDATE
     AS
+BEGIN
     SET NOCOUNT ON;
 
     IF EXISTS(SELECT *
@@ -255,6 +258,7 @@ CREATE OR ALTER TRIGGER trCheckOnlyOneClientLinked_company
             ROLLBACK TRANSACTION;
             RETURN
         END;
+END;
 GO
 
 -- Assert that every ordered product is available that day
@@ -262,11 +266,14 @@ CREATE OR ALTER TRIGGER trProductAvailable
     ON order_product
     AFTER INSERT, UPDATE
     AS
-    SET NOCOUNT ON;
+BEGIN
+
+    DECLARE @order_id INT
+    SELECT @order_id = (SELECT order_id FROM inserted)
 
     DECLARE
         @order_date DATE
-    SELECT @order_date = (SELECT CONVERT(DATE, placed_at) from [order] o where o.id = inserted.order_id);
+    SELECT @order_date = (SELECT CONVERT(DATE, placed_at) from [order] o where @order_id = o.id);
 
     if NOT EXISTS(SELECT product_id
                   FROM product_availability
@@ -276,9 +283,11 @@ CREATE OR ALTER TRIGGER trProductAvailable
             ROLLBACK TRANSACTION;
         END;
     return
-GO
+END
+GO;
 
 -- VIEWS
+
 
 CREATE OR ALTER VIEW unaccepted_orders
 AS
