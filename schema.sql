@@ -47,7 +47,7 @@ CREATE TABLE client_employee
     company_id   INT          NOT NULL FOREIGN KEY REFERENCES client_company (id),
     first_name   varchar(255) NOT NULL,
     second_name  varchar(255) NOT NULL,
-    phone_number varchar(255) CHECK (LEN(phone_number) = 9),
+    phone_number varchar(9) CHECK (LEN(phone_number) = 9),
 );
 
 drop table if EXISTS const;
@@ -85,7 +85,7 @@ create table discount
     client_person_id INT  NOT NULL FOREIGN KEY REFERENCES client_person (id),
 );
 
-drop table if EXISTS [order]; -- should be singular, but 'order' is a keyword
+drop table if EXISTS [order];
 create table [order]
 (
     id                   int IDENTITY (1, 1) PRIMARY KEY,
@@ -98,7 +98,7 @@ create table [order]
 
     accepted             bit      NOT NULL DEFAULT 0,
     rejection_time       datetime,
-    rejection_reason     TEXT,
+    rejection_reason     varchar(2048),
 
     CONSTRAINT preferred_serve_time_bigger_than_placed_at CHECK (preferred_serve_time >= placed_at)
 );
@@ -222,7 +222,6 @@ CREATE OR ALTER TRIGGER trCheckOnlyOneClientLinked_client
         END;
 GO
 
--- Ensure a client is linked either to a company or a person, but not both
 CREATE OR ALTER TRIGGER trCheckOnlyOneClientLinked_company
     ON client_company
     AFTER INSERT, UPDATE
