@@ -288,45 +288,45 @@ GO;
 
 -- VIEWS
 
-
-CREATE OR ALTER VIEW unaccepted_orders
+GO;
+CREATE OR ALTER VIEW dbo.unaccepted_orders
 AS
 SELECT *
 FROM [order] o
          LEFT JOIN reservation r on o.id = r.order_id
 WHERE o.accepted = 0;
+GO;
 
-CREATE OR ALTER VIEW products_per_order
-AS
+CREATE OR ALTER VIEW dbo.products_per_order AS
 SELECT o.id AS "order_id", p.name
 FROM [order] o
          LEFT JOIN order_product op on o.id = op.order_id
          LEFT JOIN product p ON op.product_id = p.id
+GO;
 
-CREATE OR ALTER VIEW order_price
-AS
+CREATE OR ALTER VIEW dbo.order_price AS
 SELECT o.id AS "order_id", o.order_owner_id as "client_id", o.placed_at, SUM(pa.price) as "price"
 FROM [order] o
          LEFT JOIN order_product op on o.id = op.order_id
          LEFT JOIN product_availability pa on (op.product_id = pa.product_id AND CONVERT(DATE, o.placed_at) = pa.date)
 GROUP BY o.id, o.placed_at, o.order_owner_id;
+GO;
 
 -- todo test
-CREATE OR ALTER VIEW company_spendings
-AS
+CREATE OR ALTER VIEW dbo.company_spendings AS
 SELECT cc.id, cc.name, cc.nip, op.placed_at, price
 FROM client_company cc
          LEFT JOIN order_price op ON op.client_id = cc.id
+GO;
 
-CREATE OR ALTER VIEW company_spendings_per_month
-AS
-SELECT cs.name, cs.nip, SUM(cs.price)
+CREATE OR ALTER VIEW dbo.company_spendings_per_month AS
+SELECT cs.name, cs.nip, SUM(cs.price) as 'price_total'
 from company_spendings cs
 GROUP BY cs.nip, cs.name, DATEPART(Year, cs.placed_at), DATEPART(Month, cs.placed_at);
+GO;
 
-
-CREATE OR ALTER VIEW products_available_per_day
-AS
+CREATE OR ALTER VIEW dbo.products_available_per_day AS
 SELECT p.name, pa.date
 FROM product_availability pa
          LEFT JOIN product p ON p.id = pa.product_id;
+GO;
