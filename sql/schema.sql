@@ -301,7 +301,7 @@ CREATE OR ALTER VIEW dbo.products_per_order AS
 SELECT o.id AS "order_id", p.name
 FROM [order] o
          LEFT JOIN order_product op on o.id = op.order_id
-         LEFT JOIN product p ON op.product_id = p.id
+         LEFT JOIN product p ON op.product_id = p.id;
 GO;
 
 CREATE OR ALTER VIEW dbo.order_price AS
@@ -316,7 +316,7 @@ GO;
 CREATE OR ALTER VIEW dbo.company_spendings AS
 SELECT cc.id, cc.name, cc.nip, op.placed_at, price
 FROM client_company cc
-         LEFT JOIN order_price op ON op.client_id = cc.id
+         LEFT JOIN order_price op ON op.client_id = cc.id;
 GO;
 
 CREATE OR ALTER VIEW dbo.company_spendings_per_month AS
