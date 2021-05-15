@@ -320,7 +320,7 @@ FROM client_company cc
 GO;
 
 CREATE OR ALTER VIEW dbo.company_spendings_per_month AS
-SELECT cs.name, cs.nip, SUM(cs.price) as 'price_total'
+SELECT cs.name, cs.nip, DATEPART(Year, cs.placed_at) as 'year', DATEPART(Month, cs.placed_at) as 'month', SUM(cs.price) as 'price_total'
 from company_spendings cs
 GROUP BY cs.nip, cs.name, DATEPART(Year, cs.placed_at), DATEPART(Month, cs.placed_at);
 GO;
