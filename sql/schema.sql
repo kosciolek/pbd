@@ -558,6 +558,16 @@ FROM product_availability pa
          LEFT JOIN product p ON p.id = pa.product_id;
 GO;
 
-CREATE OR ALTER VIEW dbo.reservations AS
-SELECT o.preferred_serve_time as start_time, DATEADD(minute, r.duration_minutes, o.preferred_serve_time), r.seats as seats FROM reservation r LEFT JOIN [order] o ON r.order_id = o.id;
-GO;
+-- View the start and the end time of every reservation
+CREATE OR ALTER VIEW [dbo].[reservations]
+    WITH SCHEMABINDING
+AS
+SELECT o.preferred_serve_time                                      as start_time,
+       DATEADD(minute, r.duration_minutes, o.preferred_serve_time) as end_time,
+       r.seats                                                     as seats,
+       o.id                                                        as order_id
+FROM dbo.reservation r
+         INNER JOIN [dbo].[order] o ON r.order_id = o.id;
+GO
+
+CREATE UNIQUE CLUSTERED INDEX idx_reservations_start_end ON dbo.reservations (start_time, end_time, order_id);
