@@ -405,6 +405,7 @@ END
 GO;
 
 -- todo: TEST
+-- todo: rewrite to use [dbo].[reservations]
 -- Assert that there's enough free seats for every reservation
 CREATE OR ALTER TRIGGER trFreeSeatsReservation
     ON reservation
