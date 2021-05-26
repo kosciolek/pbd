@@ -1,4 +1,4 @@
--- tables and indexes
+-- TABLES & INDEXES
 
 DROP TABLE IF EXISTS product;
 create table product
