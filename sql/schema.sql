@@ -244,27 +244,61 @@ BEGIN
 END
 GO
 
+-- Copies seat availability
+CREATE OR
+ALTER PROCEDURE copySeatLimit @dateFrom DATE, @dateTo DATE
+AS
+BEGIN
+    if (@dateFrom IS NULL OR @dateTo IS NULL)
+        raiserror ('dateFrom and dateTo must be not null', 11, 1);
+
+
+    if not exists(SELECT day as next_day, seats from seat_limit WHERE day = @dateFrom)
+        BEGIN
+            raiserror ('The source day does not have a seat limit set.', 11, 1)
+        END
+
+    insert into seat_limit (day, seats)
+    SELECT @dateTo as dateTo, seats
+    from seat_limit
+    WHERE day = @dateFrom;
+END
+GO
+
+-- Copies product availability
+CREATE OR
+ALTER PROCEDURE copyProductAvailability @dateFrom DATE, @dateTo DATE
+AS
+BEGIN
+    if (@dateFrom IS NULL OR @dateTo IS NULL)
+        raiserror ('dateFrom and dateTo must be not null', 11, 1);
+
+    if not exists(SELECT date from product_availability WHERE date = @dateFrom)
+        BEGIN
+            raiserror ('The source day does have any products available.', 11, 1)
+        END
+
+    insert into product_availability (product_id, price, date)
+    SELECT product_id, price, @dateTo
+    from product_availability
+    WHERE date = @dateFrom;
+END
+GO
+
 -- Copies the seat limit to a day from its previous day
 CREATE OR
 ALTER PROCEDURE copySeatLimitFromPreviousDay @date DATE
 AS
 BEGIN
     if (@date IS NULL)
-        SET @date = convert(date, getdate()); -- from today to tomorrow is default
-    ELSE
-        SET @date = dateadd(day, -1, @date);
+        SET @date = dateadd(day, 1, convert(date, getdate())); -- from today to tomorrow is default
 
-    if not exists(SELECT day as next_day, seats from seat_limit WHERE day = @date)
-        BEGIN
-            raiserror ('The previous day does not have a limit set.', 11, 1)
-        END
-
-    insert into seat_limit (day, seats)
-    SELECT dateadd(DAY, 1, day) as next_day, seats
-    from seat_limit
-    WHERE day = @date;
+    DECLARE @fromDate DATE;
+    SET @fromDate = dateadd(day, -1, @date);
+    exec copySeatLimit @fromDate, @date
 END
 GO
+
 
 -- Copies products available to a day from its previous day
 CREATE OR
@@ -272,19 +306,11 @@ ALTER PROCEDURE copyProductsAvailableFromPreviousDay @date DATE
 AS
 BEGIN
     if (@date IS NULL)
-        SET @date = convert(date, getdate()); -- from today to tomorrow is default
-    ELSE
-        SET @date = dateadd(day, -1, @date);
+        SET @date = dateadd(day, 1, convert(date, getdate())); -- from today to tomorrow is default
 
-    if not exists(SELECT date from product_availability WHERE date = @date)
-        BEGIN
-            raiserror ('The previous day does have any products available.', 11, 1)
-        END
-
-    insert into product_availability (product_id, price, date)
-    SELECT product_id, price, dateadd(DAY, 1, date) as next_date
-    from product_availability
-    WHERE date = @date;
+    DECLARE @fromDate DATE;
+    SET @fromDate = dateadd(day, -1, @date);
+    exec copyProductAvailability @fromDate, @date
 END
 GO
 
