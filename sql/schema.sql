@@ -79,6 +79,8 @@ create table const
     cheap_reservation_price      DECIMAL(18, 2) NOT NULL DEFAULT 50 CHECK (cheap_reservation_price > 0),
     expensive_reservation_price  DECIMAL(18, 2) NOT NULL DEFAULT 200 CHECK (expensive_reservation_price > 0),
 
+    max_reservation_minutes      INT            NOT NULL DEFAULT 1440 CHECK (max_reservation_minutes > 0);
+
     -- ensure only one row exists
     Lock                         char(1)        not null DEFAULT 'X',
     constraint PK_T1 PRIMARY KEY (Lock),
@@ -179,7 +181,7 @@ CREATE OR ALTER FUNCTION dbo.getMaxSeatsForDate(@date DATE)
     RETURNS INT AS
 BEGIN
     DECLARE @result INT;
-    SELECT @result = (SELECT seat_limit FROM seat_limit WHERE day = @date);
+    SELECT @result = (SELECT seats FROM seat_limit WHERE day = @date);
     RETURN @result;
 END
 GO;
@@ -239,6 +241,50 @@ BEGIN
         BEGIN
             raiserror ('Such an order either does not exist or is already accepted.', 11, 1)
         END
+END
+GO
+
+-- Copies the seat limit to a day from its previous day
+CREATE OR
+ALTER PROCEDURE copySeatLimitFromPreviousDay @date DATE
+AS
+BEGIN
+    if (@date IS NULL)
+        SET @date = convert(date, getdate()); -- from today to tomorrow is default
+    ELSE
+        SET @date = dateadd(day, -1, @date);
+
+    if not exists(SELECT day as next_day, seats from seat_limit WHERE day = @date)
+        BEGIN
+            raiserror ('The previous day does not have a limit set.', 11, 1)
+        END
+
+    insert into seat_limit (day, seats)
+    SELECT dateadd(DAY, 1, day) as next_day, seats
+    from seat_limit
+    WHERE day = @date;
+END
+GO
+
+-- Copies products available to a day from its previous day
+CREATE OR
+ALTER PROCEDURE copyProductsAvailableFromPreviousDay @date DATE
+AS
+BEGIN
+    if (@date IS NULL)
+        SET @date = convert(date, getdate()); -- from today to tomorrow is default
+    ELSE
+        SET @date = dateadd(day, -1, @date);
+
+    if not exists(SELECT date from product_availability WHERE date = @date)
+        BEGIN
+            raiserror ('The previous day does have any products available.', 11, 1)
+        END
+
+    insert into product_availability (product_id, price, date)
+    SELECT product_id, price, dateadd(DAY, 1, date) as next_date
+    from product_availability
+    WHERE date = @date;
 END
 GO
 
@@ -317,7 +363,6 @@ CREATE OR ALTER TRIGGER trSeafood
 BEGIN
     -- todo: should fire on order_poduct and product as well?
 
-    SELECT DATENAME(WEEKDAY, GETDATE())
     if EXISTS(SELECT o.id as date
               FROM inserted o
                        LEFT JOIN order_product op ON o.id = op.order_id
@@ -327,6 +372,115 @@ BEGIN
                     (SELECT day FROM pbd1.dbo.seafood_allowed_early_const) OR o.placed_at > dbo.getPrevMonday(o.preferred_serve_time)))
         BEGIN
             RAISERROR ('A seafood product may only be served on a seafood-enabled day.', 16, 1);
+            ROLLBACK TRANSACTION;
+        END;
+    return
+END
+GO;
+
+-- todo: TEST
+-- Assert that there's enough free seats for every reservation
+CREATE OR ALTER TRIGGER trFreeSeatsReservation
+    ON reservation
+    AFTER INSERT, UPDATE
+    AS
+BEGIN
+    -- This perhaps could be optimized. In its current form, a linear scan through orders must be made to establish how many seats are taken at a given datetime. The current crude optimization trick is to scan only orders made in the last max_reservation_minutes minutes, and preferred_serve_time is indexed
+
+    DECLARE cur CURSOR FOR
+        SELECT order_id, duration_minutes, seats FROM inserted
+
+    DECLARE @order_id int, @duration_minutes INT, @seats INT;
+    DECLARE @this_start_time DATETIME, @this_end_time DATETIME;
+    DECLARE @seats_taken INT;
+    DECLARE @seat_limit INT;
+    DECLARE @max_reservation_minutes INT;
+
+    SELECT @max_reservation_minutes = max_reservation_minutes FROM const;
+
+    OPEN cur;
+    FETCH NEXT FROM cur INTO @order_id, @duration_minutes, @seats
+
+    WHILE @@FETCH_STATUS = 0
+        BEGIN
+            SELECT @this_start_time = preferred_serve_time FROM [order] o WHERE o.id = @order_id;
+            SELECT @this_end_time = DATEADD(minute, @duration_minutes, o.preferred_serve_time)
+            FROM [order] o
+            WHERE o.id = @order_id;
+            SELECT @seat_limit = seats FROM seat_limit sl WHERE sl.day = CONVERT(DATE, @this_start_time);
+
+            IF (@seat_limit IS NULL)
+                BEGIN
+                    RAISERROR ('A seat limit was not set for a day for which a reservation has been made.', 16, 1);
+                    ROLLBACK TRANSACTION;
+                    RETURN;
+                END;
+
+            SELECT @seats_taken = (SELECT SUM(r.seats) AS seats_taken
+                                   FROM [order] o
+                                            LEFT JOIN reservation r on o.id = r.order_id
+                                   WHERE o.preferred_serve_time BETWEEN DATEADD(MINUTE, -@max_reservation_minutes, @this_start_time) AND @this_end_time)
+
+            if (@seats_taken > @seat_limit)
+                BEGIN
+                    RAISERROR ('A reservation may be only made when enough seats are free.', 16, 1);
+                    ROLLBACK TRANSACTION;
+                    RETURN;
+                END;
+
+            FETCH NEXT FROM cur INTO @order_id, @duration_minutes, @seats
+        END;
+    CLOSE cur;
+    DEALLOCATE cur;
+
+    RETURN;
+END
+GO;
+
+-- Assert takeaway orders do not have reservations
+CREATE OR ALTER TRIGGER trNoReservationForTakeaways_order
+    ON [order]
+    AFTER INSERT, UPDATE
+    AS
+BEGIN
+
+    if EXISTS(SELECT id from inserted o INNER JOIN reservation r ON o.id = r.order_id AND o.isTakeaway = true)
+        BEGIN
+            RAISERROR ('A takeaway order must not have a reservation.', 16, 1);
+            ROLLBACK TRANSACTION;
+        END;
+    return
+END
+GO;
+
+-- Assert takeaway orders do not have reservations
+CREATE OR ALTER TRIGGER trNoReservationForTakeaways_reservation
+    ON reservation
+    AFTER INSERT, UPDATE
+    AS
+BEGIN
+    if EXISTS(SELECT id from inserted r INNER JOIN [order] o ON o.id = r.order_id AND o.isTakeaway = true)
+        BEGIN
+            RAISERROR ('A takeaway order must not have a reservation.', 16, 1);
+            ROLLBACK TRANSACTION;
+        END;
+    return
+END
+GO;
+
+-- Assert reservations are not longer than the limit
+CREATE OR ALTER TRIGGER trReservationsTimeLimit
+    ON reservation
+    AFTER INSERT, UPDATE
+    AS
+BEGIN
+
+    DECLARE @max_reservation_minutes INT;
+    SELECT @max_reservation_minutes = max_reservation_minutes FROM const;
+
+    if EXISTS(SELECT order_id from inserted r WHERE r.duration_minutes > @max_reservation_minutes)
+        BEGIN
+            RAISERROR ('A reservation cannot exceed the reservation time limit.', 16, 1);
             ROLLBACK TRANSACTION;
         END;
     return
@@ -376,4 +530,8 @@ CREATE OR ALTER VIEW dbo.products_available_per_day AS
 SELECT p.name, pa.date
 FROM product_availability pa
          LEFT JOIN product p ON p.id = pa.product_id;
+GO;
+
+CREATE OR ALTER VIEW dbo.reservations AS
+SELECT o.preferred_serve_time as start_time, DATEADD(minute, r.duration_minutes, o.preferred_serve_time), r.seats as seats FROM reservation r LEFT JOIN [order] o ON r.order_id = o.id;
 GO;
