@@ -1,3 +1,5 @@
+-- tables and indexes
+
 DROP TABLE IF EXISTS product;
 create table product
 (
@@ -5,6 +7,10 @@ create table product
     name          varchar(255)   NOT NULL,
     default_price DECIMAL(18, 2) NOT NULL CHECK (default_price > 0),
     tax_percent   DECIMAL(4, 2)  NOT NULL CHECK (tax_percent BETWEEN 0 AND 1),
+    isSeafood     BIT            NOT NULL DEFAULT 0,
+
+    INDEX product_isSeafood NONCLUSTERED (isSeafood), -- klient moze chce wyszukac tylko owoce moza lub je wylaczyc
+    INDEX product_name NONCLUSTERED (name), -- klient moze wyszukowac po nazwie
 );
 
 DROP TABLE IF EXISTS product_availability;
@@ -15,6 +21,10 @@ CREATE TABLE product_availability
     date       DATE           NOT NULL DEFAULT GETDATE(),
 
     CONSTRAINT product_id_date_unique UNIQUE (product_id, date)
+
+    INDEX product_availability_product_id NONCLUSTERED (product_id), -- joiny
+    INDEX product_availability_price NONCLUSTERED (price), -- klient moze chcec sortowac produkty po cenie itp
+    INDEX product_availability_date NONCLUSTERED (date), -- joiny
 );
 
 
@@ -50,6 +60,8 @@ CREATE TABLE client_employee
     first_name   varchar(255) NOT NULL,
     second_name  varchar(255) NOT NULL,
     phone_number varchar(9) CHECK (LEN(phone_number) = 9),
+
+    -- INDEX client_employee_company_id NONCLUSTERED (company_id), -- listowanie wszystkich pracownikow firmy... raczej rzadko uzywane?
 );
 
 drop table if EXISTS const;
@@ -67,8 +79,6 @@ create table const
     cheap_reservation_price      DECIMAL(18, 2) NOT NULL DEFAULT 50 CHECK (cheap_reservation_price > 0),
     expensive_reservation_price  DECIMAL(18, 2) NOT NULL DEFAULT 200 CHECK (expensive_reservation_price > 0),
 
-    amount_of_seats              INT            NOT NULL DEFAULT 12,
-
     -- ensure only one row exists
     Lock                         char(1)        not null DEFAULT 'X',
     constraint PK_T1 PRIMARY KEY (Lock),
@@ -80,6 +90,7 @@ VALUES;
 -- TODO a trigger that checks the discount can be made
 -- the user has spent enough money
 -- the user does not have already a discount applied
+-- TODO: stworzyc indexy, beda potrzebne do powyzeszego triggera
 drop table if EXISTS discount;
 create table discount
 (
@@ -89,14 +100,13 @@ create table discount
 );
 
 
--- TODO check that ordered product is available today
 drop table if EXISTS [order];
 create table [order]
 (
     id                   int IDENTITY (1, 1) PRIMARY KEY,
     placed_at            datetime NOT NULL DEFAULT GETDATE(),
 
-    preferred_serve_time DATETIME NOT NULL DEFAULT getdate(),
+    preferred_serve_time DATETIME NOT NULL DEFAULT GETDATE(),
     isTakeaway           BIT      NOT NULL DEFAULT 0,
 
     order_owner_id       INT      NOT NULL FOREIGN KEY REFERENCES client (id),
@@ -106,6 +116,10 @@ create table [order]
     rejection_reason     varchar(2048),
 
     CONSTRAINT preferred_serve_time_bigger_than_placed_at CHECK (preferred_serve_time >= placed_at)
+
+    INDEX order_accepted NONCLUSTERED (accepted), -- funkcjonowanie restauracji
+    INDEX order_preferred_serve_time NONCLUSTERED (preferred_serve_time), -- funkcjonowanie restauracji
+    INDEX order_preferred_placed_at NONCLUSTERED (placed_at), -- funkcjonowanie restauracji
 );
 
 
@@ -115,26 +129,31 @@ CREATE TABLE order_associated_employee
 (
     employee_id INT NOT NULL FOREIGN KEY REFERENCES client_employee (id),
     order_id    INT NOT NULL FOREIGN KEY REFERENCES [order] (id),
+
+    INDEX order_associated_employee_order_id (order_id), -- joiny przy listowaniu pracownikow dla danego zamowienia
 )
 
--- TODO TRIGGER - jesli sa owoce, to mozna max do poniedzialku poprzedzajacego zamowienie
 drop table if EXISTS order_product;
 create table order_product
 (
     order_id   INT NOT NULL FOREIGN KEY REFERENCES [order] (id),
-    product_id INT NOT NULL FOREIGN KEY REFERENCES product (id), -- CHECK that the product is not a seafood, or it was ordered on a seafood-enabled day
+    product_id INT NOT NULL FOREIGN KEY REFERENCES product (id),
+
+    INDEX order_product_order_id (order_id) -- joiny przy listowaniu produktow danego zamowienia
 );
 
 drop table if EXISTS reservation;
 create table reservation
 (
-    order_id         INT NOT NULL FOREIGN KEY REFERENCES [order] (id),
+    order_id         INT PRIMARY KEY FOREIGN KEY REFERENCES [order] (id),
     duration_minutes INT NOT NULL DEFAULT 90,
     seats            INT NOT NULL DEFAULT 2 CHECK (seats >= 2),
+
+    INDEX order_associated_employee_order_id NONCLUSTERED (order_id) -- joiny przy znajdowaniu rezerwacji 
 );
 
-DROP TABLE IF EXISTS seat_limit_override;
-CREATE TABLE seat_limit_override
+DROP TABLE IF EXISTS seat_limit;
+CREATE TABLE seat_limit
 (
     day        DATE PRIMARY KEY,
     seat_limit INT NOT NULL,
@@ -153,17 +172,24 @@ VALUES ('thursday'),
        ('saturday');
 
 
+
 GO;
 -- FUNCTIONS
-CREATE OR
-ALTER FUNCTION dbo.getMaxSeatsForDate(@date DATE)
+CREATE OR ALTER FUNCTION dbo.getMaxSeatsForDate(@date DATE)
     RETURNS INT AS
 BEGIN
     DECLARE @result INT;
-    SELECT @result = (SELECT seat_limit FROM seat_limit_override WHERE day = @date);
-    IF @result IS NULL
-        SELECT @result = (SELECT amount_of_seats FROM const);
+    SELECT @result = (SELECT seat_limit FROM seat_limit WHERE day = @date);
     RETURN @result;
+END
+GO;
+
+
+-- Returns the last monday before this date
+CREATE OR ALTER FUNCTION dbo.getPrevMonday(@date DATE)
+    RETURNS DATE AS
+BEGIN
+    RETURN DATEADD(DAY, (DATEDIFF(DAY, 0, @date) / 7) * 7 - 7, 0)
 END
 GO;
 
@@ -202,8 +228,7 @@ GO
 
 
 -- Marks an order as accepted
-CREATE OR
-ALTER PROCEDURE accept_order @order_id varchar(255)
+CREATE OR ALTER PROCEDURE accept_order @order_id varchar(255)
 AS
 BEGIN
     IF EXISTS(SELECT id FROM [order] WHERE id = @order_id AND accepted = 0)
@@ -268,18 +293,40 @@ CREATE OR ALTER TRIGGER trProductAvailable
     AS
 BEGIN
 
-    DECLARE @order_id INT
-    SELECT @order_id = (SELECT order_id FROM inserted)
-
-    DECLARE
-        @order_date DATE
-    SELECT @order_date = (SELECT CONVERT(DATE, placed_at) from [order] o where @order_id = o.id);
-
-    if NOT EXISTS(SELECT product_id
-                  FROM product_availability
-                  WHERE date = @order_date)
+    if EXISTS(SELECT pa.date as availability_date
+              FROM inserted i
+                       INNER JOIN [order] o ON i.order_id = o.id
+                       INNER JOIN product p ON p.id = i.product_id
+                       LEFT JOIN product_availability pa
+                                 ON p.id = pa.product_id AND pa.date = CONVERT(DATE, o.preferred_serve_time)
+              WHERE pa.date IS NULL)
         BEGIN
             RAISERROR ('A product may only be ordered when it is available.', 16, 1);
+            ROLLBACK TRANSACTION;
+        END;
+    return
+
+END
+GO;
+
+-- Assert that all seafood is to be served on a seafood-enabled day and placed before the last monday
+CREATE OR ALTER TRIGGER trSeafood
+    ON [order]
+    AFTER INSERT, UPDATE
+    AS
+BEGIN
+    -- todo: should fire on order_poduct and product as well?
+
+    SELECT DATENAME(WEEKDAY, GETDATE())
+    if EXISTS(SELECT o.id as date
+              FROM inserted o
+                       LEFT JOIN order_product op ON o.id = op.order_id
+                       LEFT JOIN product p ON op.product_id = p.id
+              WHERE p.isSeafood = 1
+                AND (DATENAME(WEEKDAY, CONVERT(DATE, preferred_serve_time)) NOT IN
+                    (SELECT day FROM pbd1.dbo.seafood_allowed_early_const) OR o.placed_at > dbo.getPrevMonday(o.preferred_serve_time)))
+        BEGIN
+            RAISERROR ('A seafood product may only be served on a seafood-enabled day.', 16, 1);
             ROLLBACK TRANSACTION;
         END;
     return
