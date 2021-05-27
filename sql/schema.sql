@@ -10,7 +10,7 @@ create table product
     isSeafood     BIT            NOT NULL DEFAULT 0,
 
     INDEX product_isSeafood NONCLUSTERED (isSeafood), -- klient moze chce wyszukac tylko owoce moza lub je wylaczyc
-    INDEX product_name NONCLUSTERED (name), -- klient moze wyszukowac po nazwie
+    INDEX product_name NONCLUSTERED (name),           -- klient moze wyszukowac po nazwie
 );
 
 DROP TABLE IF EXISTS product_availability;
@@ -21,10 +21,9 @@ CREATE TABLE product_availability
     date       DATE           NOT NULL DEFAULT GETDATE(),
 
     CONSTRAINT product_id_date_unique UNIQUE (product_id, date)
-
-    INDEX product_availability_product_id NONCLUSTERED (product_id), -- joiny
-    INDEX product_availability_price NONCLUSTERED (price), -- klient moze chcec sortowac produkty po cenie itp
-    INDEX product_availability_date NONCLUSTERED (date), -- joiny
+        INDEX product_availability_product_id NONCLUSTERED (product_id), -- joiny
+    INDEX product_availability_price NONCLUSTERED (price),               -- klient moze chcec sortowac produkty po cenie itp
+    INDEX product_availability_date NONCLUSTERED (date),                 -- joiny
 );
 
 
@@ -81,8 +80,8 @@ create table const
 
     max_reservation_minutes      INT            NOT NULL DEFAULT 1440 CHECK (max_reservation_minutes > 0);
 
-    -- ensure only one row exists
-    Lock                         char(1)        not null DEFAULT 'X',
+-- ensure only one row exists
+Lock char(1)        not null DEFAULT 'X',
     constraint PK_T1 PRIMARY KEY (Lock),
     constraint CK_T1_Locked CHECK (Lock = 'X')
 );
@@ -118,10 +117,9 @@ create table [order]
     rejection_reason     varchar(2048),
 
     CONSTRAINT preferred_serve_time_bigger_than_placed_at CHECK (preferred_serve_time >= placed_at)
-
-    INDEX order_accepted NONCLUSTERED (accepted), -- funkcjonowanie restauracji
+        INDEX order_accepted NONCLUSTERED (accepted),                     -- funkcjonowanie restauracji
     INDEX order_preferred_serve_time NONCLUSTERED (preferred_serve_time), -- funkcjonowanie restauracji
-    INDEX order_preferred_placed_at NONCLUSTERED (placed_at), -- funkcjonowanie restauracji
+    INDEX order_preferred_placed_at NONCLUSTERED (placed_at),             -- funkcjonowanie restauracji
 );
 
 
@@ -151,7 +149,7 @@ create table reservation
     duration_minutes INT NOT NULL DEFAULT 90,
     seats            INT NOT NULL DEFAULT 2 CHECK (seats >= 2),
 
-    INDEX order_associated_employee_order_id NONCLUSTERED (order_id) -- joiny przy znajdowaniu rezerwacji 
+    INDEX order_associated_employee_order_id NONCLUSTERED (order_id) -- joiny przy znajdowaniu rezerwacji
 );
 
 DROP TABLE IF EXISTS seat_limit;
@@ -177,7 +175,8 @@ VALUES ('thursday'),
 
 GO;
 -- FUNCTIONS
-CREATE OR ALTER FUNCTION dbo.getMaxSeatsForDate(@date DATE)
+CREATE OR
+ALTER FUNCTION dbo.getMaxSeatsForDate(@date DATE)
     RETURNS INT AS
 BEGIN
     DECLARE @result INT;
@@ -188,7 +187,8 @@ GO;
 
 
 -- Returns the last monday before this date
-CREATE OR ALTER FUNCTION dbo.getPrevMonday(@date DATE)
+CREATE OR
+ALTER FUNCTION dbo.getPrevMonday(@date DATE)
     RETURNS DATE AS
 BEGIN
     RETURN DATEADD(DAY, (DATEDIFF(DAY, 0, @date) / 7) * 7 - 7, 0)
@@ -230,7 +230,8 @@ GO
 
 
 -- Marks an order as accepted
-CREATE OR ALTER PROCEDURE accept_order @order_id varchar(255)
+CREATE OR
+ALTER PROCEDURE accept_order @order_id varchar(255)
 AS
 BEGIN
     IF EXISTS(SELECT id FROM [order] WHERE id = @order_id AND accepted = 0)
@@ -395,7 +396,8 @@ BEGIN
                        LEFT JOIN product p ON op.product_id = p.id
               WHERE p.isSeafood = 1
                 AND (DATENAME(WEEKDAY, CONVERT(DATE, preferred_serve_time)) NOT IN
-                    (SELECT day FROM pbd1.dbo.seafood_allowed_early_const) OR o.placed_at > dbo.getPrevMonday(o.preferred_serve_time)))
+                     (SELECT day FROM pbd1.dbo.seafood_allowed_early_const) OR
+                     o.placed_at > dbo.getPrevMonday(o.preferred_serve_time)))
         BEGIN
             RAISERROR ('A seafood product may only be served on a seafood-enabled day.', 16, 1);
             ROLLBACK TRANSACTION;
@@ -473,7 +475,9 @@ CREATE OR ALTER TRIGGER trNoReservationForTakeaways_order
     AS
 BEGIN
 
-    if EXISTS(SELECT id from inserted o INNER JOIN reservation r ON o.id = r.order_id AND o.isTakeaway = true)
+    if EXISTS(SELECT id
+              from inserted o
+                       INNER JOIN reservation r ON o.id = r.order_id AND o.isTakeaway = true)
         BEGIN
             RAISERROR ('A takeaway order must not have a reservation.', 16, 1);
             ROLLBACK TRANSACTION;
@@ -488,7 +492,9 @@ CREATE OR ALTER TRIGGER trNoReservationForTakeaways_reservation
     AFTER INSERT, UPDATE
     AS
 BEGIN
-    if EXISTS(SELECT id from inserted r INNER JOIN [order] o ON o.id = r.order_id AND o.isTakeaway = true)
+    if EXISTS(SELECT id
+              from inserted r
+                       INNER JOIN [order] o ON o.id = r.order_id AND o.isTakeaway = true)
         BEGIN
             RAISERROR ('A takeaway order must not have a reservation.', 16, 1);
             ROLLBACK TRANSACTION;
@@ -518,13 +524,12 @@ GO;
 
 -- VIEWS
 
-GO;
 CREATE OR ALTER VIEW dbo.unaccepted_orders
 AS
 SELECT *
 FROM [order] o
          LEFT JOIN reservation r on o.id = r.order_id
-WHERE o.accepted = 0;
+WHERE o.accepted = 0 AND o.rejection_time IS NULL;
 GO;
 
 CREATE OR ALTER VIEW dbo.products_per_order AS
@@ -534,23 +539,33 @@ FROM [order] o
          LEFT JOIN product p ON op.product_id = p.id;
 GO;
 
-CREATE OR ALTER VIEW dbo.order_price AS
-SELECT o.id AS "order_id", o.order_owner_id as "client_id", o.placed_at, SUM(pa.price) as "price"
+CREATE OR ALTER VIEW dbo.orders_per_client AS
+SELECT o.id                         AS "order_id",
+       o.order_owner_id             as "client_id",
+       o.placed_at                  as "placed_at",
+       SUM(pa.price)                as "price",
+       o.accepted                   as "accepted",
+       o.rejection_time as "rejection_time"
 FROM [order] o
          LEFT JOIN order_product op on o.id = op.order_id
          LEFT JOIN product_availability pa on (op.product_id = pa.product_id AND CONVERT(DATE, o.placed_at) = pa.date)
-GROUP BY o.id, o.placed_at, o.order_owner_id;
+GROUP BY o.id, o.placed_at, o.order_owner_id, o.rejection_time, o.accepted;
 GO;
 
 -- todo test
 CREATE OR ALTER VIEW dbo.company_spendings AS
-SELECT cc.id, cc.name, cc.nip, op.placed_at, price
+SELECT cc.id, cc.name, cc.nip, opc.placed_at, price
 FROM client_company cc
-         LEFT JOIN order_price op ON op.client_id = cc.id;
+         LEFT JOIN orders_per_client opc ON opc.client_id = cc.id
+WHERE opc.rejection_time IS NULL;
 GO;
 
 CREATE OR ALTER VIEW dbo.company_spendings_per_month AS
-SELECT cs.name, cs.nip, DATEPART(Year, cs.placed_at) as 'year', DATEPART(Month, cs.placed_at) as 'month', SUM(cs.price) as 'price_total'
+SELECT cs.name,
+       cs.nip,
+       DATEPART(Year, cs.placed_at)  as 'year',
+       DATEPART(Month, cs.placed_at) as 'month',
+       SUM(cs.price)                 as 'price_total'
 from company_spendings cs
 GROUP BY cs.nip, cs.name, DATEPART(Year, cs.placed_at), DATEPART(Month, cs.placed_at);
 GO;
