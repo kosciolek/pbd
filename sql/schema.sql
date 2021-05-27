@@ -20,10 +20,10 @@ CREATE TABLE product_availability
     price      DECIMAL(18, 2) NOT NULL CHECK (price > 0),
     date       DATE           NOT NULL DEFAULT GETDATE(),
 
-    CONSTRAINT product_id_date_unique UNIQUE (product_id, date)
-        INDEX product_availability_product_id NONCLUSTERED (product_id), -- joiny
-    INDEX product_availability_price NONCLUSTERED (price),               -- klient moze chcec sortowac produkty po cenie itp
-    INDEX product_availability_date NONCLUSTERED (date),                 -- joiny
+    CONSTRAINT product_id_date_unique UNIQUE (product_id, date),
+    INDEX product_availability_product_id NONCLUSTERED (product_id), -- joiny
+    INDEX product_availability_price NONCLUSTERED (price),           -- klient moze chcec sortowac produkty po cenie itp
+    INDEX product_availability_date NONCLUSTERED (date),             -- joiny
 );
 
 
@@ -78,10 +78,11 @@ create table const
     cheap_reservation_price      DECIMAL(18, 2) NOT NULL DEFAULT 50 CHECK (cheap_reservation_price > 0),
     expensive_reservation_price  DECIMAL(18, 2) NOT NULL DEFAULT 200 CHECK (expensive_reservation_price > 0),
 
-    max_reservation_minutes      INT            NOT NULL DEFAULT 1440 CHECK (max_reservation_minutes > 0);
+    max_reservation_minutes      INT            NOT NULL DEFAULT 1440 CHECK (max_reservation_minutes > 0
+        ),
 
 -- ensure only one row exists
-Lock char(1)        not null DEFAULT 'X',
+    Lock                         char(1)        not null DEFAULT 'X',
     constraint PK_T1 PRIMARY KEY (Lock),
     constraint CK_T1_Locked CHECK (Lock = 'X')
 );
@@ -116,8 +117,8 @@ create table [order]
     rejection_time       datetime,
     rejection_reason     varchar(2048),
 
-    CONSTRAINT preferred_serve_time_bigger_than_placed_at CHECK (preferred_serve_time >= placed_at)
-        INDEX order_accepted NONCLUSTERED (accepted),                     -- funkcjonowanie restauracji
+    CONSTRAINT preferred_serve_time_bigger_than_placed_at CHECK (preferred_serve_time >= placed_at),
+    INDEX order_accepted NONCLUSTERED (accepted),                         -- funkcjonowanie restauracji
     INDEX order_preferred_serve_time NONCLUSTERED (preferred_serve_time), -- funkcjonowanie restauracji
     INDEX order_preferred_placed_at NONCLUSTERED (placed_at),             -- funkcjonowanie restauracji
 );
@@ -155,8 +156,8 @@ create table reservation
 DROP TABLE IF EXISTS seat_limit;
 CREATE TABLE seat_limit
 (
-    day        DATE PRIMARY KEY,
-    seat_limit INT NOT NULL,
+    day   DATE PRIMARY KEY,
+    seats INT NOT NULL,
 )
 
 drop table if EXISTS seafood_allowed_early_const;
@@ -448,9 +449,9 @@ BEGIN
             SELECT @seats_taken = (SELECT SUM(r.seats) AS seats_taken
                                    FROM [order] o
                                             LEFT JOIN reservation r on o.id = r.order_id
-                                   WHERE o.preferred_serve_time BETWEEN DATEADD(MINUTE, -@max_reservation_minutes, @this_start_time) AND @this_end_time) AND
-                   NOT (o.preferred_serve_time > @this_end_time OR
-                        DATEADD(MINUTE, r.duration, o.preferred_serve_time) < @this_start_time)
+                                   WHERE (o.preferred_serve_time BETWEEN DATEADD(MINUTE, -@max_reservation_minutes, @this_start_time) AND @this_end_time)
+                                     AND NOT (o.preferred_serve_time > @this_end_time OR
+                                              DATEADD(MINUTE, r.duration_minutes, o.preferred_serve_time) < @this_start_time));
 
             if (@seats_taken > @seat_limit)
                 BEGIN
@@ -529,22 +530,24 @@ AS
 SELECT *
 FROM [order] o
          LEFT JOIN reservation r on o.id = r.order_id
-WHERE o.accepted = 0 AND o.rejection_time IS NULL;
+WHERE o.accepted = 0
+  AND o.rejection_time IS NULL;
 GO;
 
 CREATE OR ALTER VIEW dbo.products_per_order AS
-SELECT o.id AS "order_id", p.name
+SELECT o.id AS "order_id", p.name as "product_name", pa.price as product_price
 FROM [order] o
          LEFT JOIN order_product op on o.id = op.order_id
-         LEFT JOIN product p ON op.product_id = p.id;
+         LEFT JOIN product p ON op.product_id = p.id
+         LEFT JOIN product_availability pa on p.id = pa.product_id AND pa.date = CONVERT(date, o.placed_at)
 GO;
 
 CREATE OR ALTER VIEW dbo.orders_per_client AS
-SELECT o.id                         AS "order_id",
-       o.order_owner_id             as "client_id",
-       o.placed_at                  as "placed_at",
-       SUM(pa.price)                as "price",
-       o.accepted                   as "accepted",
+SELECT o.id             AS "order_id",
+       o.order_owner_id as "client_id",
+       o.placed_at      as "placed_at",
+       SUM(pa.price)    as "price",
+       o.accepted       as "accepted",
        o.rejection_time as "rejection_time"
 FROM [order] o
          LEFT JOIN order_product op on o.id = op.order_id
