@@ -446,7 +446,9 @@ BEGIN
             SELECT @seats_taken = (SELECT SUM(r.seats) AS seats_taken
                                    FROM [order] o
                                             LEFT JOIN reservation r on o.id = r.order_id
-                                   WHERE o.preferred_serve_time BETWEEN DATEADD(MINUTE, -@max_reservation_minutes, @this_start_time) AND @this_end_time)
+                                   WHERE o.preferred_serve_time BETWEEN DATEADD(MINUTE, -@max_reservation_minutes, @this_start_time) AND @this_end_time) AND
+                   NOT (o.preferred_serve_time > @this_end_time OR
+                        DATEADD(MINUTE, r.duration, o.preferred_serve_time) < @this_start_time)
 
             if (@seats_taken > @seat_limit)
                 BEGIN
