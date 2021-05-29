@@ -116,7 +116,7 @@ create table [order]
     rejection_time       datetime,
     rejection_reason     varchar(2048),
 
-    completed            BIT               DEFAULT 0,
+    completed            BIT     NOT NULL  DEFAULT 0,
 
     CONSTRAINT preferred_serve_time_bigger_than_placed_at CHECK (preferred_serve_time >= placed_at),
     INDEX order_accepted NONCLUSTERED (accepted),                         -- funkcjonowanie restauracji
