@@ -4,8 +4,7 @@ DROP TABLE IF EXISTS product;
 create table product
 (
     id            int IDENTITY (1,1) PRIMARY KEY,
-    name          varchar(255)   NOT NULL,
-    default_price DECIMAL(18, 2) NOT NULL CHECK (default_price > 0),
+    name          varchar(255)   NOT NULL,      
     tax_percent   DECIMAL(4, 2)  NOT NULL CHECK (tax_percent BETWEEN 0 AND 1),
     isSeafood     BIT            NOT NULL DEFAULT 0,
 
