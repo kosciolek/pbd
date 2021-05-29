@@ -139,8 +139,9 @@ CREATE TABLE order_associated_employee
 drop table if EXISTS order_product;
 create table order_product
 (
-    order_id   INT NOT NULL FOREIGN KEY REFERENCES [order] (id),
-    product_id INT NOT NULL FOREIGN KEY REFERENCES product (id),
+    order_id   INT            NOT NULL FOREIGN KEY REFERENCES [order] (id),
+    price      DECIMAL(18, 2) NOT NULL CHECK (price > 0),
+    product_id INT            NOT NULL FOREIGN KEY REFERENCES product (id),
 
     INDEX order_product_order_id (order_id) -- joiny przy listowaniu produktow danego zamowienia
 );
@@ -195,6 +196,24 @@ ALTER FUNCTION dbo.getPrevMonday(@date DATE)
     RETURNS DATE AS
 BEGIN
     RETURN DATEADD(DAY, (DATEDIFF(DAY, 0, @date) / 7) * 7 - 7, 0)
+END
+GO;
+
+CREATE OR
+ALTER FUNCTION dbo.getClientType(@client_id INT)
+    RETURNS varchar(20) AS
+BEGIN
+    if (exists(select id from client_person where id = @client_id))
+        BEGIN
+            RETURN 'person'
+        END
+    else
+        if (exists(select id from client_company where id = @client_id))
+            BEGIN
+                RETURN 'company'
+            END;
+
+    return cast('No such client.' as int);
 END
 GO;
 
@@ -415,6 +434,15 @@ SELECT *,
        iif(DATEADD(DAY, (select d1 from const), d.date_start) >= getdate() AND d.date_start <= getdate(), 1,
            0)                                             as 'active'
 from discount d;
+go;
+
+CREATE OR ALTER VIEW [dbo].passive_discounts AS
+select client_id
+from orders_per_client
+where dbo.getClientType(client_id) = 'person'
+  and price >= (select k1 from const)
+GROUP BY client_id
+HAVING COUNT(client_id) >= (select z1 from const);
 go;
 
 -- TRIGGERS
