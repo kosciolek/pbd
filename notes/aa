@@ -1,0 +1,30 @@
+everyday flow
+
+worker:
+- check unaccepted orders
+- accept an order (or reject it)
+- mark order as completed 
+
+- change seat limit (or copy to next day)
+- change products available  (or copy to next day)
+
+manager:
+(analytics?)
+- get total spent for a company
+- get product popularity
+- get order amount per hour
+- saved by discounts
+
+
+
+
+consumer:
+- list products and prices (with filtering)
+- place an order
+- update an order
+- check order status
+- make reservation
+
+- check discount possibility
+- check active discount
+- activate discount
