@@ -1,4 +1,7 @@
 import com.github.javafaker.Faker;
+
+import java.time.LocalDate;
+import java.util.LinkedList;
 import java.util.Locale;
 
 public class ClientPerson {
@@ -7,7 +10,11 @@ public class ClientPerson {
     public String secondName;
     public String phoneNumber;
     public int numberOfOrdersAbove30 = 0;
-    public boolean hasDiscount = false;
+    public double costOfAllOrders = 0;
+    public int numberOfOrders = 0;
+    public boolean hasDiscount1 = false;
+    public boolean hasDiscount2 = false;
+    public LocalDate startOfDiscount2;
 
 
     public ClientPerson(int id){
