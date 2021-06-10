@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Copy seat limit - error</title>
+        <style>
+</style>
+        
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item { list-style-type: none; } .task-list-item-checkbox { margin-left: -20px; vertical-align: middle; }
+</style>
+        
+        
+        
+    </head>
+    <body class="vscode-body vscode-light">
+        <ul>
+<li><a href="#copy-seat-limit---error">Copy seat limit - error</a></li>
+<li><a href="#copy-seat-limit---any-day-to-any-day">Copy seat limit - any day to any day</a></li>
+<li><a href="#copy-seat-limit---from-previous-day">Copy seat limit - from previous day</a></li>
+<li><a href="#register-product-type">Register product type</a></li>
+<li><a href="#register-product-type---invalid-tax">Register product type - invalid tax</a></li>
+<li><a href="#register-product-availability">Register product availability</a></li>
+<li><a href="#register-product-availability---invalid-price">Register product availability - invalid price</a></li>
+<li><a href="#copy-product-availability---from-previous-day">Copy product availability - from previous day</a></li>
+<li><a href="#place-an-order-show-all-products-per-order">Place an order, show all products per order</a></li>
+<li><a href="#place-an-order-add-an-item---product-not-available-that-day">Place an order, add an item - product not available that day</a></li>
+<li><a href="#show-orders-awaiting-acceptation">Show orders awaiting acceptation</a></li>
+<li><a href="#accept-an-order">Accept an order</a></li>
+<li><a href="#show-orders-awaiting-completion">Show orders awaiting completion</a></li>
+<li><a href="#list-products-available-today">List products available today</a></li>
+<li><a href="#make-reservation---error-no-seat-limit-set">Make reservation - error, no seat limit set</a></li>
+<li><a href="#make-reservation">Make reservation</a></li>
+<li><a href="#make-reservation---error-only-one-per-order">Make reservation - error, only one per order</a></li>
+<li><a href="#make-reservation---error-not-paid-enough">Make reservation - error, not paid enough</a></li>
+<li><a href="#make-reservation-1">Make reservation</a></li>
+<li><a href="#make-reservation---colliding">Make reservation - colliding</a></li>
+<li><a href="#make-active-discount---error-not-paid-enough--eligibility">Make active discount - error, not paid enough + eligibility</a></li>
+<li><a href="#make-discount">Make discount</a></li>
+<li><a href="#make-discount---error-two-active-at-once">Make discount - error, two active at once</a></li>
+<li><a href="#product-report">Product report</a></li>
+<li><a href="#order-seafood---error-not-a-seafood-enabled-day">Order seafood - error, not a seafood-enabled day</a></li>
+<li><a href="#order-seafood---error-not-before-last-monday">Order seafood - error, not before last monday</a></li>
+<li><a href="#order-seafood">Order seafood</a></li>
+<li><a href="#active-discount-passive-discount-price-multipliers-price-table-daily-for-client">Active discount, passive discount, price multipliers, price table daily for client</a></li>
+</ul>
+<h3 id="copy-seat-limit---error">Copy seat limit - error</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> seat_limit (<span class="hljs-keyword">day</span>, seats) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;2021-05-06&#x27;</span>, <span class="hljs-number">10</span>);
+
+<span class="hljs-comment">-- core</span>
+exec copySeatLimit @dateFrom = &#x27;2021-12-12&#x27;, @dateTo = &#x27;2021-05-07&#x27;
+
+<span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">from</span> seat_limit;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="copy-seat-limit---any-day-to-any-day">Copy seat limit - any day to any day</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> seat_limit (<span class="hljs-keyword">day</span>, seats) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;2021-05-06&#x27;</span>, <span class="hljs-number">10</span>);
+
+<span class="hljs-comment">-- core</span>
+exec copySeatLimit @dateFrom = &#x27;2021-05-06&#x27;, @dateTo = &#x27;2021-05-07&#x27;
+
+<span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">from</span> seat_limit;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="copy-seat-limit---from-previous-day">Copy seat limit - from previous day</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> seat_limit (<span class="hljs-keyword">day</span>, seats) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;2021-05-06&#x27;</span>, <span class="hljs-number">10</span>);
+
+<span class="hljs-comment">-- core</span>
+exec copySeatLimitFromPreviousDay @date = &#x27;2021-05-07&#x27;
+
+<span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">from</span> seat_limit;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="register-product-type">Register product type</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>)
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> product
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="register-product-type---invalid-tax">Register product type - invalid tax</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">1.34</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>)
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> product
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="register-product-availability">Register product availability</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.5</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>)
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>) <span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">12.40</span>, <span class="hljs-string">&#x27;2021-05-06&#x27;</span>)
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> product_availability;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="register-product-availability---invalid-price">Register product availability - invalid price</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniczaki&#x27;</span>, <span class="hljs-number">0.5</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>)
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>) <span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniczaki&#x27;</span>, <span class="hljs-number">-12.40</span>, <span class="hljs-string">&#x27;2021-05-06&#x27;</span>)
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> product_availability;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="copy-product-availability---from-previous-day">Copy product availability - from previous day</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.5</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>)
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>) <span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">12.40</span>, <span class="hljs-string">&#x27;2021-05-06&#x27;</span>)
+
+<span class="hljs-comment">-- core</span>
+exec copyProductsAvailableFromPreviousDay @<span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;2021-05-07&#x27;</span>
+exec copyProductsAvailableFromPreviousDay @<span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;2021-05-08&#x27;</span>
+exec copyProductsAvailableFromPreviousDay @<span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;2021-05-09&#x27;</span>
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> product_availability;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="place-an-order-show-all-products-per-order">Place an order, show all products per order</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">9.40</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Mix Sałat&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Mix Sałat&#x27;</span>, <span class="hljs-number">9.00</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">6.00</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (preferred_serve_time, date_placed, order_owner_id)
+<span class="hljs-keyword">values</span> (<span class="hljs-keyword">getdate</span>(), <span class="hljs-keyword">getdate</span>(), (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span> <span class="hljs-keyword">from</span> client_person));
+
+<span class="hljs-keyword">DECLARE</span> @order_id <span class="hljs-built_in">INT</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                         <span class="hljs-keyword">from</span> [<span class="hljs-keyword">order</span>]);
+
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Mix Sałat&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Mix Sałat&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Barszcz z jajkiem&#x27;
+
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> products_per_order;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="place-an-order-add-an-item---product-not-available-that-day">Place an order, add an item - product not available that day</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+<span class="hljs-keyword">DECLARE</span> @client1 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person);
+
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description, isSeafood)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Owoce morza - miks&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Super ekstra najlepsze.&#x27;</span>, <span class="hljs-number">1</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Owoce morza - miks&#x27;</span>, <span class="hljs-number">300</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client1, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">day</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order1 <span class="hljs-built_in">INT</span> = scope_identity();
+
+<span class="hljs-comment">-- core</span>
+exec addProduct @order_id = @order1, @product_id = &#x27;Owoce morza - miks&#x27;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="show-orders-awaiting-acceptation">Show orders awaiting acceptation</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">9.40</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Mix Sałat&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Mix Sałat&#x27;</span>, <span class="hljs-number">9.00</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">6.00</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (preferred_serve_time, date_placed, order_owner_id)
+<span class="hljs-keyword">values</span> (<span class="hljs-keyword">getdate</span>(), <span class="hljs-keyword">getdate</span>(), (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span> <span class="hljs-keyword">from</span> client_person));
+
+<span class="hljs-keyword">DECLARE</span> @order_id <span class="hljs-built_in">INT</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                         <span class="hljs-keyword">from</span> [<span class="hljs-keyword">order</span>]);
+
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Mix Sałat&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Mix Sałat&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Barszcz z jajkiem&#x27;
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> awaiting_acceptation;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="accept-an-order">Accept an order</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">9.40</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Mix Sałat&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Mix Sałat&#x27;</span>, <span class="hljs-number">9.00</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">6.00</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (preferred_serve_time, date_placed, order_owner_id)
+<span class="hljs-keyword">values</span> (<span class="hljs-keyword">getdate</span>(), <span class="hljs-keyword">getdate</span>(), (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span> <span class="hljs-keyword">from</span> client_person));
+
+<span class="hljs-keyword">DECLARE</span> @order_id <span class="hljs-built_in">INT</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                         <span class="hljs-keyword">from</span> [<span class="hljs-keyword">order</span>]);
+
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Mix Sałat&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Mix Sałat&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Barszcz z jajkiem&#x27;
+
+<span class="hljs-comment">-- core</span>
+exec change_order_state @order_id = @order_id, @state = &#x27;accepted&#x27;
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> [<span class="hljs-keyword">order</span>]; <span class="hljs-comment">-- date_accepted changed as well</span>
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="show-orders-awaiting-completion">Show orders awaiting completion</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">9.40</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Mix Sałat&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Mix Sałat&#x27;</span>, <span class="hljs-number">9.00</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">6.00</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (preferred_serve_time, date_placed, order_owner_id)
+<span class="hljs-keyword">values</span> (<span class="hljs-keyword">getdate</span>(), <span class="hljs-keyword">getdate</span>(), (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span> <span class="hljs-keyword">from</span> client_person));
+
+<span class="hljs-keyword">DECLARE</span> @order_id <span class="hljs-built_in">INT</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                         <span class="hljs-keyword">from</span> [<span class="hljs-keyword">order</span>]);
+
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Mix Sałat&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Mix Sałat&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Barszcz z jajkiem&#x27;
+
+exec change_order_state @order_id = @order_id, @state = &#x27;accepted&#x27;
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> awaiting_completion;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="list-products-available-today">List products available today</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">9.40</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Mix Sałat&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Mix Sałat&#x27;</span>, <span class="hljs-number">9.00</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">6.00</span>, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">day</span>, <span class="hljs-number">1</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>())));
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-comment">-- select * from product_availability where date = convert(date, getdate())</span>
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> todays_products;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="make-reservation---error-no-seat-limit-set">Make reservation - error, no seat limit set</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">10</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> ((<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span> <span class="hljs-keyword">from</span> client_person), <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">DECLARE</span> @order_id <span class="hljs-built_in">INT</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                         <span class="hljs-keyword">from</span> [<span class="hljs-keyword">order</span>]);
+
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> reservation (order_id, duration_minutes, seats) <span class="hljs-keyword">values</span> (@order_id, <span class="hljs-number">90</span>, <span class="hljs-number">3</span>)
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="make-reservation">Make reservation</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">10</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> ((<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span> <span class="hljs-keyword">from</span> client_person), <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">DECLARE</span> @order_id <span class="hljs-built_in">INT</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                         <span class="hljs-keyword">from</span> [<span class="hljs-keyword">order</span>]);
+
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> seat_limit (<span class="hljs-keyword">day</span>, seats) <span class="hljs-keyword">values</span> (<span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()), <span class="hljs-number">6</span>)
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> reservation (order_id, duration_minutes, seats) <span class="hljs-keyword">values</span> (@order_id, <span class="hljs-number">90</span>, <span class="hljs-number">3</span>)
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="make-reservation---error-only-one-per-order">Make reservation - error, only one per order</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">10</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> ((<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span> <span class="hljs-keyword">from</span> client_person), <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">DECLARE</span> @order_id <span class="hljs-built_in">INT</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                         <span class="hljs-keyword">from</span> [<span class="hljs-keyword">order</span>]);
+
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> seat_limit (<span class="hljs-keyword">day</span>, seats) <span class="hljs-keyword">values</span> (<span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()), <span class="hljs-number">6</span>)
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> reservation (order_id, duration_minutes, seats) <span class="hljs-keyword">values</span> (@order_id, <span class="hljs-number">90</span>, <span class="hljs-number">3</span>)
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> reservation (order_id, duration_minutes, seats) <span class="hljs-keyword">values</span> (@order_id, <span class="hljs-number">90</span>, <span class="hljs-number">3</span>)
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> reservations;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="make-reservation---error-not-paid-enough">Make reservation - error, not paid enough</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+exec insert_client_person @first_name = &#x27;Irek&#x27;, @second_name = &#x27;Irkowaty&#x27;, @phone_number = &#x27;123123123&#x27;
+<span class="hljs-keyword">DECLARE</span> @client1 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person);
+<span class="hljs-keyword">DECLARE</span> @client2 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person
+                        <span class="hljs-keyword">where</span> <span class="hljs-keyword">id</span> != @client1);
+
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">10</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client1, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order1 <span class="hljs-built_in">INT</span> = scope_identity();
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client2, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">3</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order2 <span class="hljs-built_in">INT</span> = scope_identity();
+
+
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> seat_limit (<span class="hljs-keyword">day</span>, seats)
+<span class="hljs-keyword">values</span> (<span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()), <span class="hljs-number">6</span>)
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> reservation (order_id, duration_minutes, seats)
+<span class="hljs-keyword">values</span> (@order1, <span class="hljs-number">90</span>, <span class="hljs-number">3</span>)
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> reservations;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="make-reservation-1">Make reservation</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+exec insert_client_person @first_name = &#x27;Irek&#x27;, @second_name = &#x27;Irkowaty&#x27;, @phone_number = &#x27;123123123&#x27;
+<span class="hljs-keyword">DECLARE</span> @client1 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person);
+<span class="hljs-keyword">DECLARE</span> @client2 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person
+                        <span class="hljs-keyword">where</span> <span class="hljs-keyword">id</span> != @client1);
+
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">10</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client1, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order1 <span class="hljs-built_in">INT</span> = scope_identity();
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client2, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">3</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order2 <span class="hljs-built_in">INT</span> = scope_identity();
+
+
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> seat_limit (<span class="hljs-keyword">day</span>, seats)
+<span class="hljs-keyword">values</span> (<span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()), <span class="hljs-number">6</span>)
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> reservation (order_id, duration_minutes, seats)
+<span class="hljs-keyword">values</span> (@order1, <span class="hljs-number">90</span>, <span class="hljs-number">3</span>)
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> reservations;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="make-reservation---colliding">Make reservation - colliding</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+exec insert_client_person @first_name = &#x27;Irek&#x27;, @second_name = &#x27;Irkowaty&#x27;, @phone_number = &#x27;123123123&#x27;
+<span class="hljs-keyword">DECLARE</span> @client1 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person);
+<span class="hljs-keyword">DECLARE</span> @client2 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person
+                        <span class="hljs-keyword">where</span> <span class="hljs-keyword">id</span> != @client1);
+
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Bardzo Drogie Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Bardzo drogie ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Bardzo Drogie Ziemniaczki&#x27;</span>, <span class="hljs-number">300</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client1, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order1 <span class="hljs-built_in">INT</span> = scope_identity();
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client2, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">3</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order2 <span class="hljs-built_in">INT</span> = scope_identity();
+
+
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order2, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> seat_limit (<span class="hljs-keyword">day</span>, seats)
+<span class="hljs-keyword">values</span> (<span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()), <span class="hljs-number">6</span>)
+
+<span class="hljs-comment">-- core</span>
+
+<span class="hljs-comment">-- Reservations overlap, and together they take more seats than available</span>
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> reservation (order_id, duration_minutes, seats)
+<span class="hljs-keyword">values</span> (@order1, <span class="hljs-number">120</span>, <span class="hljs-number">3</span>) <span class="hljs-comment">-- change duration to 30, and it&#x27;ll work</span>
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> reservation (order_id, duration_minutes, seats)
+<span class="hljs-keyword">values</span> (@order2, <span class="hljs-number">90</span>, <span class="hljs-number">4</span>)
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> reservations;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="make-active-discount---error-not-paid-enough--eligibility">Make active discount - error, not paid enough + eligibility</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+exec insert_client_person @first_name = &#x27;Irek&#x27;, @second_name = &#x27;Irkowaty&#x27;, @phone_number = &#x27;123123123&#x27;
+<span class="hljs-keyword">DECLARE</span> @client1 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person);
+<span class="hljs-keyword">DECLARE</span> @client2 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person
+                        <span class="hljs-keyword">where</span> <span class="hljs-keyword">id</span> != @client1);
+
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Bardzo Drogie Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Bardzo drogie ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Bardzo Drogie Ziemniaczki&#x27;</span>, <span class="hljs-number">300</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client1, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order1 <span class="hljs-built_in">INT</span> = scope_identity();
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client2, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">3</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order2 <span class="hljs-built_in">INT</span> = scope_identity();
+
+
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> discount (date_start, client_person_id) <span class="hljs-keyword">values</span> (<span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">day</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">convert</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>())), @client1);
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> discount_eligibility;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="make-discount">Make discount</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+exec insert_client_person @first_name = &#x27;Irek&#x27;, @second_name = &#x27;Irkowaty&#x27;, @phone_number = &#x27;123123123&#x27;
+<span class="hljs-keyword">DECLARE</span> @client1 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person);
+<span class="hljs-keyword">DECLARE</span> @client2 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person
+                        <span class="hljs-keyword">where</span> <span class="hljs-keyword">id</span> != @client1);
+
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Bardzo Drogie Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Bardzo drogie ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Bardzo Drogie Ziemniaczki&#x27;</span>, <span class="hljs-number">300</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client1, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order1 <span class="hljs-built_in">INT</span> = scope_identity();
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client2, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">3</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order2 <span class="hljs-built_in">INT</span> = scope_identity();
+
+
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-comment">-- select * from discount_eligibility; -- will show eligibility</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> discount (date_start, client_person_id) <span class="hljs-keyword">values</span> (<span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">day</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">convert</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>())), @client1);
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> discount_eligibility;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="make-discount---error-two-active-at-once">Make discount - error, two active at once</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+exec insert_client_person @first_name = &#x27;Irek&#x27;, @second_name = &#x27;Irkowaty&#x27;, @phone_number = &#x27;123123123&#x27;
+<span class="hljs-keyword">DECLARE</span> @client1 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person);
+<span class="hljs-keyword">DECLARE</span> @client2 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person
+                        <span class="hljs-keyword">where</span> <span class="hljs-keyword">id</span> != @client1);
+
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Bardzo Drogie Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Bardzo drogie ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Bardzo Drogie Ziemniaczki&#x27;</span>, <span class="hljs-number">300</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client1, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order1 <span class="hljs-built_in">INT</span> = scope_identity();
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client2, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">3</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order2 <span class="hljs-built_in">INT</span> = scope_identity();
+
+
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> discount (date_start, client_person_id) <span class="hljs-keyword">values</span> (<span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">day</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">convert</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>())), @client1);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> discount (date_start, client_person_id) <span class="hljs-keyword">values</span> (<span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">day</span>, <span class="hljs-number">4</span>, <span class="hljs-keyword">convert</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>())), @client1);
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> discount_eligibility;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="product-report">Product report</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+exec insert_client_person @first_name = &#x27;Irek&#x27;, @second_name = &#x27;Irkowaty&#x27;, @phone_number = &#x27;123123123&#x27;
+<span class="hljs-keyword">DECLARE</span> @client1 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person);
+<span class="hljs-keyword">DECLARE</span> @client2 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person
+                        <span class="hljs-keyword">where</span> <span class="hljs-keyword">id</span> != @client1);
+
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Bardzo Drogie Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Bardzo drogie ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Bardzo Drogie Ziemniaczki&#x27;</span>, <span class="hljs-number">300</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">0.23</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">9.00</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client1, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order1 <span class="hljs-built_in">INT</span> = scope_identity();
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client2, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">3</span>, <span class="hljs-keyword">getdate</span>()));
+<span class="hljs-keyword">DECLARE</span> @order2 <span class="hljs-built_in">INT</span> = scope_identity();
+
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Bardzo Drogie Ziemniaczki&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Barszcz z jajkiem&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Barszcz z jajkiem&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Barszcz z jajkiem&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Barszcz z jajkiem&#x27;
+exec addProduct @order_id = @order1, @product_id = &#x27;Barszcz z jajkiem&#x27;
+
+<span class="hljs-comment">-- core</span>
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> product_report;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="order-seafood---error-not-a-seafood-enabled-day">Order seafood - error, not a seafood-enabled day</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">declare</span> @pon1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-01-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @wt1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-02-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @sr1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-03-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @czw1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-04-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @pia1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-05-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @sob1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-06-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @ndz1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-07-2021&#x27;</span>;
+
+<span class="hljs-keyword">declare</span> @pon2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-08-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @wt2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-09-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @sr2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-10-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @czw2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-11-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @pia2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-12-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @sob2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-13-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @ndz2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-14-2021&#x27;</span>;
+
+<span class="hljs-keyword">declare</span> @ordering_day <span class="hljs-built_in">DATE</span> = @pon1;
+<span class="hljs-keyword">declare</span> @serving_day <span class="hljs-built_in">DATE</span> = @wt1;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+<span class="hljs-keyword">DECLARE</span> @client1 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person);
+
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description, isSeafood)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Owoce morza - miks&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Super ekstra najlepsze.&#x27;</span>, <span class="hljs-number">1</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Owoce morza - miks&#x27;</span>, <span class="hljs-number">300</span>, @serving_day);
+
+
+<span class="hljs-comment">--core</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, date_placed, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client1, @ordering_day, @serving_day);
+<span class="hljs-keyword">DECLARE</span> @order1 <span class="hljs-built_in">INT</span> = scope_identity();
+
+exec addProduct @order_id = @order1, @product_id = &#x27;Owoce morza - miks&#x27;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="order-seafood---error-not-before-last-monday">Order seafood - error, not before last monday</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">declare</span> @pon1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-01-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @wt1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-02-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @sr1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-03-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @czw1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-04-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @pia1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-05-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @sob1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-06-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @ndz1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-07-2021&#x27;</span>;
+
+<span class="hljs-keyword">declare</span> @pon2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-08-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @wt2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-09-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @sr2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-10-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @czw2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-11-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @pia2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-12-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @sob2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-13-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @ndz2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-14-2021&#x27;</span>;
+
+<span class="hljs-keyword">declare</span> @ordering_day <span class="hljs-built_in">DATE</span> = @wt2;
+<span class="hljs-keyword">declare</span> @serving_day <span class="hljs-built_in">DATE</span> = @pia2;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+<span class="hljs-keyword">DECLARE</span> @client1 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person);
+
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description, isSeafood)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Owoce morza - miks&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Super ekstra najlepsze.&#x27;</span>, <span class="hljs-number">1</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Owoce morza - miks&#x27;</span>, <span class="hljs-number">300</span>, @serving_day);
+
+
+<span class="hljs-comment">--core</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, date_placed, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client1, @ordering_day, @serving_day);
+<span class="hljs-keyword">DECLARE</span> @order1 <span class="hljs-built_in">INT</span> = scope_identity();
+
+exec addProduct @order_id = @order1, @product_id = &#x27;Owoce morza - miks&#x27;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="order-seafood">Order seafood</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">declare</span> @pon1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-01-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @wt1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-02-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @sr1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-03-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @czw1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-04-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @pia1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-05-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @sob1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-06-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @ndz1 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-07-2021&#x27;</span>;
+
+<span class="hljs-keyword">declare</span> @pon2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-08-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @wt2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-09-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @sr2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-10-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @czw2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-11-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @pia2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-12-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @sob2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-13-2021&#x27;</span>;
+<span class="hljs-keyword">declare</span> @ndz2 <span class="hljs-built_in">date</span> = <span class="hljs-string">&#x27;06-14-2021&#x27;</span>;
+
+<span class="hljs-keyword">declare</span> @ordering_day <span class="hljs-built_in">DATE</span> = @sob1;
+<span class="hljs-keyword">declare</span> @serving_day <span class="hljs-built_in">DATE</span> = @pia2;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+<span class="hljs-keyword">DECLARE</span> @client1 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person);
+
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description, isSeafood)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Owoce morza - miks&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Super ekstra najlepsze.&#x27;</span>, <span class="hljs-number">1</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Owoce morza - miks&#x27;</span>, <span class="hljs-number">300</span>, @serving_day);
+
+
+<span class="hljs-comment">--core</span>
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, date_placed, preferred_serve_time)
+<span class="hljs-keyword">values</span> (@client1, @ordering_day, @serving_day);
+<span class="hljs-keyword">DECLARE</span> @order1 <span class="hljs-built_in">INT</span> = scope_identity();
+
+exec addProduct @order_id = @order1, @product_id = &#x27;Owoce morza - miks&#x27;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="active-discount-passive-discount-price-multipliers-price-table-daily-for-client">Active discount, passive discount, price multipliers, price table daily for client</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
+<span class="hljs-keyword">DECLARE</span> @client1 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> top <span class="hljs-number">1</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person);
+exec insert_client_person @first_name = &#x27;Irek&#x27;, @second_name = &#x27;Irkowaty&#x27;, @phone_number = &#x27;123123123&#x27;
+<span class="hljs-keyword">DECLARE</span> @client2 <span class="hljs-built_in">int</span> = (<span class="hljs-keyword">select</span> <span class="hljs-keyword">id</span>
+                        <span class="hljs-keyword">from</span> client_person
+                        <span class="hljs-keyword">where</span> <span class="hljs-keyword">id</span> != @client1);
+
+
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent, description)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">0.23</span>, <span class="hljs-string">&#x27;Najlepsze ziemniaczusie.&#x27;</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Super Ekstra Ziemniaczki&#x27;</span>, <span class="hljs-number">9.40</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Mix Sałat&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Mix Sałat&#x27;</span>, <span class="hljs-number">9.00</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Barszcz z jajkiem&#x27;</span>, <span class="hljs-number">6.00</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product (<span class="hljs-keyword">id</span>, tax_percent)
+<span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;Trufle&#x27;</span>, <span class="hljs-number">0.07</span>);
+<span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> product_availability (product_id, price, <span class="hljs-built_in">date</span>)
+<span class="hljs-keyword">VALUES</span> (<span class="hljs-string">&#x27;Trufle&#x27;</span>, <span class="hljs-number">150</span>, <span class="hljs-keyword">CONVERT</span>(<span class="hljs-built_in">date</span>, <span class="hljs-keyword">getdate</span>()));
+
+
+<span class="hljs-keyword">DECLARE</span> @cnt <span class="hljs-built_in">INT</span> = <span class="hljs-number">0</span>;
+
+WHILE @cnt &lt; 10
+    <span class="hljs-keyword">BEGIN</span>
+
+        <span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+        <span class="hljs-keyword">values</span> (@client1, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">2</span>, <span class="hljs-keyword">getdate</span>()));
+        <span class="hljs-keyword">DECLARE</span> @order1 <span class="hljs-built_in">INT</span> = scope_identity();
+
+        exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+        exec addProduct @order_id = @order1, @product_id = &#x27;Mix Sałat&#x27;
+        exec addProduct @order_id = @order1, @product_id = &#x27;Barszcz z jajkiem&#x27;
+        exec addProduct @order_id = @order1, @product_id = &#x27;Trufle&#x27;
+        exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczki&#x27;
+        exec addProduct @order_id = @order1, @product_id = &#x27;Mix Sałat&#x27;
+        exec addProduct @order_id = @order1, @product_id = &#x27;Barszcz z jajkiem&#x27;
+        exec addProduct @order_id = @order1, @product_id = &#x27;Trufle&#x27;
+
+        <span class="hljs-keyword">insert</span> <span class="hljs-keyword">into</span> [<span class="hljs-keyword">order</span>] (order_owner_id, preferred_serve_time)
+        <span class="hljs-keyword">values</span> (@client2, <span class="hljs-keyword">dateadd</span>(<span class="hljs-keyword">hour</span>, <span class="hljs-number">3</span>, <span class="hljs-keyword">getdate</span>()));
+        <span class="hljs-keyword">DECLARE</span> @order2 <span class="hljs-built_in">INT</span> = scope_identity();
+
+        exec addProduct @order_id = @order2, @product_id = &#x27;Mix sałat&#x27;
+
+        <span class="hljs-keyword">SET</span> @cnt = @cnt + <span class="hljs-number">1</span>;
+    <span class="hljs-keyword">END</span>;
+
+<span class="hljs-keyword">select</span> * <span class="hljs-keyword">from</span> passive_discounts;
+
+<span class="hljs-comment">/*select * from price_multipliers;*/</span>
+
+<span class="hljs-comment">/*insert into discount (date_start, client_person_id) values (convert(date, getdate()), @client1);
+select * from price_multipliers;*/</span>
+
+<span class="hljs-comment">/*select * from price_table_daily_for_client;*/</span>
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+
+    </body>
+    </html>

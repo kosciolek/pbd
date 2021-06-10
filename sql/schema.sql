@@ -122,10 +122,13 @@ create table [order]
 
     note                 varchar(2048),
 
-    CONSTRAINT preferred_serve_time_bigger_than_placed_at CHECK (preferred_serve_time >= placed_at),
-    INDEX order_accepted NONCLUSTERED (state),                            -- funkcjonowanie restauracji
+    CONSTRAINT preferred_serve_time_bigger_than_date_placed CHECK (preferred_serve_time >= date_placed),
+    INDEX order_state NONCLUSTERED (state),                            -- funkcjonowanie restauracji
     INDEX order_preferred_serve_time NONCLUSTERED (preferred_serve_time), -- funkcjonowanie restauracji
-    INDEX order_preferred_placed_at NONCLUSTERED (placed_at),             -- funkcjonowanie restauracji
+    INDEX order_date_placed NONCLUSTERED (date_placed),             -- funkcjonowanie restauracji
+    INDEX order_date_accepted NONCLUSTERED (date_accepted),             -- funkcjonowanie restauracji
+    INDEX order_date_rejected NONCLUSTERED (date_rejected),             -- funkcjonowanie restauracji
+    INDEX order_date_completed NONCLUSTERED (date_completed),             -- funkcjonowanie restauracji
 );
 
 
@@ -198,7 +201,7 @@ CREATE OR
 ALTER FUNCTION dbo.getPrevMonday(@date DATE)
     RETURNS DATE AS
 BEGIN
-    RETURN DATEADD(DAY, (DATEDIFF(DAY, 0, @date) / 7) * 7 - 7, 0)
+    RETURN dateadd(week,datediff(week,0, @date),0)
 END
 GO;
 
@@ -281,13 +284,13 @@ BEGIN
         UPDATE [order] SET state = 'placed', date_placed = getdate() WHERE id = @order_id
     ELSE
         if (@state = 'accepted')
-            UPDATE [order] SET state = 'accepted', date_placed = getdate() WHERE id = @order_id
+            UPDATE [order] SET state = 'accepted', date_accepted = getdate() WHERE id = @order_id
         ELSE
             if (@state = 'rejected')
-                UPDATE [order] SET state = 'rejected', date_placed = getdate() WHERE id = @order_id
+                UPDATE [order] SET state = 'rejected', date_rejected = getdate() WHERE id = @order_id
             ELSE
                 if (@state = 'completed')
-                    UPDATE [order] SET state = 'completed', date_placed = getdate() WHERE id = @order_id
+                    UPDATE [order] SET state = 'completed', date_completed = getdate() WHERE id = @order_id
 
 END
 GO
@@ -378,6 +381,47 @@ BEGIN
 END
 GO
 
+-- Adds a products to an order, respecting price multipliers
+CREATE OR
+ALTER PROCEDURE addProduct @order_id int, @product_id varchar(255)
+AS
+BEGIN
+    BEGIN TRAN;
+    if (@order_id IS NULL OR @product_id IS NULL)
+        begin
+            raiserror ('order_id and product_id must not be null', 11, 1);
+            return
+        end
+
+
+    if ((select order_owner_id from [order] where id = @order_id) is null OR
+        dbo.getClientType((select order_owner_id from [order] where id = @order_id)) = 'company')
+        begin
+            insert into order_product (order_id, effective_price, product_id)
+            values (@order_id, (select price
+                                from product_availability pa
+                                where pa.product_id = @product_id
+                                  AND pa.date = CONVERT(date,
+                                            (select preferred_serve_time from [order] o where o.id = @order_id))),
+                    @product_id);
+        end
+    else
+        begin
+            insert into order_product (order_id, effective_price, product_id)
+            values (@order_id, (select multiplier
+                                from price_multipliers
+                                where client_id = (select order_owner_id from [order] where id = @order_id)) *
+                               (select price
+                                from product_availability pa
+                                where pa.product_id = @product_id
+                                  AND pa.date = CONVERT(date,
+                                            (select preferred_serve_time from [order] o where o.id = @order_id))),
+                    @product_id);
+        end
+    COMMIT TRAN;
+END;
+GO;
+
 -- VIEWS
 
 CREATE OR ALTER VIEW dbo.awaiting_acceptation
@@ -401,23 +445,23 @@ SELECT o.id AS "order_id", p.id as "product_id", effective_price, pa.price as pr
 FROM [order] o
          LEFT JOIN order_product op on o.id = op.order_id
          LEFT JOIN product p ON op.product_id = p.id
-         LEFT JOIN product_availability pa on p.id = pa.product_id AND pa.date = CONVERT(date, o.placed_at)
+         LEFT JOIN product_availability pa on p.id = pa.product_id AND pa.date = CONVERT(date, o.date_placed)
 GO;
 
 CREATE OR ALTER VIEW dbo.orders_per_client AS
 SELECT o.id                    AS "order_id",
        o.order_owner_id        as "client_id",
-       o.placed_at             as "placed_at",
+       o.date_placed             as "date_placed",
        SUM(op.effective_price) as "effective_price",
        o.state                 as "state"
 FROM [order] o
          INNER JOIN order_product op on o.id = op.order_id
-GROUP BY o.id, o.placed_at, o.order_owner_id, o.state;
+GROUP BY o.id, o.date_placed, o.order_owner_id, o.state;
 GO;
 
 -- todo test
 CREATE OR ALTER VIEW dbo.company_spendings AS
-SELECT cc.id, cc.name, cc.nip, opc.placed_at, effective_price
+SELECT cc.id, cc.name, cc.nip, opc.date_placed, effective_price
 FROM client_company cc
          LEFT JOIN orders_per_client opc ON opc.client_id = cc.id
 WHERE opc.state = 'completed';
@@ -426,11 +470,11 @@ GO;
 CREATE OR ALTER VIEW dbo.company_spendings_per_month AS
 SELECT cs.name,
        cs.nip,
-       DATEPART(Year, cs.placed_at)  as 'year',
-       DATEPART(Month, cs.placed_at) as 'month',
+       DATEPART(Year, cs.date_placed)  as 'year',
+       DATEPART(Month, cs.date_placed) as 'month',
        SUM(effective_price)          as 'total_spendings'
 from company_spendings cs
-GROUP BY cs.nip, cs.name, DATEPART(Year, cs.placed_at), DATEPART(Month, cs.placed_at);
+GROUP BY cs.nip, cs.name, DATEPART(Year, cs.date_placed), DATEPART(Month, cs.date_placed);
 GO;
 
 CREATE OR ALTER VIEW [dbo].[price_table_daily] AS
@@ -455,15 +499,16 @@ SELECT o.id               AS     "order_id",
        isSeafood,
        o.isTakeaway,
        p.tax_percent,
-       year(placed_at)           'year',
-       month(placed_at)          'month',
-       day(placed_at)            'day',
-       datepart(hour, placed_at) 'hour'
+       year(date_placed)           'year',
+       month(date_placed)          'month',
+       day(date_placed)            'day',
+       datepart(hour, date_placed) 'hour'
 FROM [order] o
-         LEFT JOIN order_product op on o.id = op.order_id
-         LEFT JOIN product p ON op.product_id = p.id
-         LEFT JOIN product_availability pa on p.id = pa.product_id AND pa.date = CONVERT(date, o.placed_at);
+         FULL JOIN order_product op on o.id = op.order_id
+         FULL JOIN product p ON op.product_id = p.id
+         FULL JOIN product_availability pa on p.id = pa.product_id AND pa.date = CONVERT(date, o.date_placed) where p.id is not null;
 GO;
+
 
 -- View the start and the end time of every reservation
 CREATE OR ALTER VIEW [dbo].[reservations]
@@ -606,21 +651,49 @@ END
 GO;
 
 -- Assert that all seafood is to be served on a seafood-enabled day and placed before the last monday
-CREATE OR ALTER TRIGGER trSeafood
-    ON [order]
+CREATE OR ALTER TRIGGER trSeafood_order_product
+    ON order_product
     AFTER INSERT, UPDATE
     AS
 BEGIN
-    -- todo: should fire on order_poduct and product as well?
+    -- todo: should fire on order and product as well?
+
 
     if EXISTS(SELECT o.id as date
-              FROM inserted o
-                       LEFT JOIN order_product op ON o.id = op.order_id
+              FROM inserted op
+                       LEFT JOIN [order] o ON o.id = op.order_id
                        LEFT JOIN product p ON op.product_id = p.id
               WHERE p.isSeafood = 1
                 AND (DATENAME(WEEKDAY, CONVERT(DATE, preferred_serve_time)) NOT IN
-                     (SELECT day FROM pbd1.dbo.seafood_allowed_early_const) OR
-                     o.placed_at > dbo.getPrevMonday(o.preferred_serve_time)))
+                     (SELECT day FROM seafood_allowed_early_const) OR
+                     o.date_placed >= dateadd(day, 1, dbo.getPrevMonday(o.preferred_serve_time)))
+        )
+        BEGIN
+            RAISERROR ('A seafood product may only be served on a seafood-enabled day and before the last monday (including).', 16, 1);
+            ROLLBACK TRANSACTION;
+            return
+        END;
+    return
+END
+GO;
+
+CREATE OR ALTER TRIGGER trSeafood_order_product
+    ON order_product
+    AFTER INSERT, UPDATE
+    AS
+BEGIN
+    -- todo: should fire on order and product as well?
+
+
+    if EXISTS(    SELECT o.id as date
+              FROM inserted op
+                  LEFT JOIN [order] o ON o.id = op.order_id
+                       LEFT JOIN product p ON op.product_id = p.id
+              WHERE p.isSeafood = 1
+                AND (DATENAME(WEEKDAY, CONVERT(DATE, preferred_serve_time)) NOT IN
+                     (SELECT day FROM seafood_allowed_early_const) OR
+                     o.date_placed > dbo.getPrevMonday(o.preferred_serve_time))
+)
         BEGIN
             RAISERROR ('A seafood product may only be served on a seafood-enabled day and before the last monday (including).', 16, 1);
             ROLLBACK TRANSACTION;
@@ -777,16 +850,18 @@ BEGIN
 
 
     if EXISTS(select o.id
-              from inserted r
+              from reservation r
                        left join [order] o on r.order_id = o.id
                        left join order_product op on o.id = op.order_id
               where order_owner_id is not null
                 and (select sum(effective_price) 'price'
                      from order_product inner_op
-                     where inner_op.order_id = r.order_id) >
+                     where inner_op.order_id = r.order_id) <
                     iif((select count(inner_o.id)
                          from [order] inner_o
-                         where inner_o.order_owner_id = o.order_owner_id) >= 5, 50, 200))
+                         where inner_o.order_owner_id = o.order_owner_id) >=
+                        (select min_orders_cheap_reservation from const),
+                        (select cheap_reservation_price from const), (select expensive_reservation_price from const)))
         BEGIN
             RAISERROR ('The cost limit for a reservation has not been passed.', 16, 1);
             ROLLBACK TRANSACTION;
