@@ -1,77 +1,108 @@
-import React, { useEffect } from 'react';
-import knex from 'knex';
-import { config } from 'dotenv';
-import { BrowserRouter as Router, Switch, Route } from 'react-router-dom';
-import icon from '../assets/icon.svg';
-import './App.global.css';
+import {
+  AppBar,
+  Drawer,
+  IconButton,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Toolbar
+} from '@material-ui/core';
+import React, { useState } from 'react';
+import { HashRouter as Router, Switch, Route, Link } from 'react-router-dom';
+import { Menu as MenuIcon, Person, Note, Fastfood } from '@material-ui/icons';
+import { View } from './View';
 
-config();
+const tableNames = [
+  'discounts',
+  'price_multipliers',
+  'product_availability',
+  "products_per_order",
+  "orders_per_client",
+  "awaiting_acceptation",
+  "orders_per_client",
+  "price_table_daily",
+  "todays_products",
+  "discount_eligibility",
+  "passive_discounts",
+  'order_product',
+  'reservation',
+  'seat_limit'
+];
 
-const host = process.env.DB_HOST;
-const user = process.env.DB_USER;
-const password = process.env.DB_PASSWORD;
-const port = parseInt(process.env.DB_PORT!, 10);
-const database = process.env.DB_DATABASE;
-const db = knex({
-  client: 'mssql',
-  connection: {
-    host,
-    user,
-    password,
-    port,
-    database
-  }
-});
-
-const Hello = () => {
-  useEffect(() => {
-    (async () => {
-      const a = await db.table<any, any, any>('client').select('*');
-      console.log(a);
-    })();
-  });
-  return (
-    <div>
-      <div className="Hello">
-        <img width="200px" alt="icon" src={icon} />
-      </div>
-      <h1>electron-react-boilerplate</h1>
-      <div className="Hello">
-        <a
-          href="https://electron-react-boilerplate.js.org/"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <button type="button">
-            <span role="img" aria-label="books">
-              📚
-            </span>
-            Read our docs
-          </button>
-        </a>
-        <a
-          href="https://github.com/sponsors/electron-react-boilerplate"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <button type="button">
-            <span role="img" aria-label="books">
-              🙏
-            </span>
-            Donate
-          </button>
-        </a>
-      </div>
-    </div>
-  );
-};
+const tabs = [
+  {
+    name: 'Orders',
+    component: () => <View table="order" />,
+    icon: Note
+  },
+  {
+    name: 'Products',
+    component: () => <View table="product" />,
+    icon: Fastfood
+  },
+  {
+    name: 'Client - People',
+    component: () => <View table="client_person" />,
+    icon: Person
+  },
+  {
+    name: 'Client - Companies',
+    component: () => <View table="client_company" />,
+    icon: Person
+  },
+  ...tableNames.map(table => ({
+    name: table
+      .replaceAll('_', ' ')
+      .replace(/(\b[a-z](?!\s))/g, x => x.toUpperCase()),
+    component: () => <View table={table} />,
+    icon: Fastfood
+  }))
+];
 
 export default function App() {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const toggleDrawer = () => setIsDrawerOpen(prev => !prev);
+  const [tab, setTab] = useState(0);
+
+  const TabComponent = tabs[tab].component;
+
   return (
     <Router>
-      <Switch>
-        <Route path="/" component={Hello} />
-      </Switch>
+      <AppBar position="fixed">
+        <Toolbar>
+          <IconButton
+            edge="start"
+            color="inherit"
+            aria-label="menu"
+            onClick={toggleDrawer}
+          >
+            <MenuIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+      <div style={{ height: '64px' }} />
+      <Drawer
+        PaperProps={{ style: { minWidth: 'min(85vw, 300px)' } }}
+        anchor="left"
+        open={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      >
+        <List>
+          {tabs.map(({ icon: Icon, name }, i) => {
+            return (
+              <ListItem button key={name} onClick={() => setTab(i)}>
+                <ListItemIcon>
+                  <Icon />
+                </ListItemIcon>
+                <ListItemText primary={name} />
+              </ListItem>
+            );
+          })}
+        </List>
+      </Drawer>
+
+      <TabComponent />
     </Router>
   );
 }
