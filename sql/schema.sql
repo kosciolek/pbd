@@ -106,7 +106,6 @@ drop table if EXISTS [order];
 create table [order]
 (
     id                   int IDENTITY (1, 1) PRIMARY KEY,
-    placed_at            datetime NOT NULL DEFAULT GETDATE(),
 
     preferred_serve_time DATETIME NOT NULL DEFAULT GETDATE(),
     isTakeaway           BIT      NOT NULL DEFAULT 0,
