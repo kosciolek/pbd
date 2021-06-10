@@ -850,7 +850,7 @@ BEGIN
 
 
     if EXISTS(select o.id
-              from reservation r
+              from inserted r
                        left join [order] o on r.order_id = o.id
                        left join order_product op on o.id = op.order_id
               where order_owner_id is not null
