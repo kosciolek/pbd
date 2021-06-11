@@ -89,11 +89,7 @@ create table const
 INSERT INTO const DEFAULT
 VALUES;
 
--- TODO a trigger that checks the discount can be made
--- the user has spent enough money
--- the user does not have already a discount applied
--- TODO: stworzyc indexy, beda potrzebne do powyzeszego triggera
-drop table if EXISTS discount;
+
 create table discount
 (
     id               int IDENTITY (1, 1) PRIMARY KEY,
@@ -841,7 +837,7 @@ BEGIN
 END
 GO;
 
---todo paid enough to make a reservation
+
 CREATE OR ALTER TRIGGER trReservationsPaidEnough
     ON reservation
     AFTER INSERT, UPDATE
