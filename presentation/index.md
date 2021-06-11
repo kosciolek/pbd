@@ -1,6 +1,3 @@
-- [Copy seat limit - error](#copy-seat-limit---error)
-- [Copy seat limit - any day to any day](#copy-seat-limit---any-day-to-any-day)
-- [Copy seat limit - from previous day](#copy-seat-limit---from-previous-day)
 - [Register product type](#register-product-type)
 - [Register product type - invalid tax](#register-product-type---invalid-tax)
 - [Register product availability](#register-product-availability)
@@ -13,10 +10,13 @@
 - [Show orders awaiting completion](#show-orders-awaiting-completion)
 - [List products available today](#list-products-available-today)
 - [Make reservation - error, no seat limit set](#make-reservation---error-no-seat-limit-set)
-- [Make reservation](#make-reservation)
-- [Make reservation - error, only one per order](#make-reservation---error-only-one-per-order)
+- [Copy seat limit - error](#copy-seat-limit---error)
+- [Copy seat limit - any day to any day](#copy-seat-limit---any-day-to-any-day)
+- [Copy seat limit - from previous day](#copy-seat-limit---from-previous-day)
 - [Make reservation - error, not paid enough](#make-reservation---error-not-paid-enough)
-- [Make reservation](#make-reservation-1)
+- [Make reservation - error, only one per order](#make-reservation---error-only-one-per-order)
+- [Make reservation - error, not paid enough](#make-reservation---error-not-paid-enough-1)
+- [Make reservation](#make-reservation)
 - [Make reservation - colliding](#make-reservation---colliding)
 - [Make active discount - error, not paid enough + eligibility](#make-active-discount---error-not-paid-enough--eligibility)
 - [Make discount](#make-discount)
@@ -27,50 +27,6 @@
 - [Order seafood](#order-seafood)
 - [Active discount, passive discount, price multipliers, price table daily for client](#active-discount-passive-discount-price-multipliers-price-table-daily-for-client)
 
-### Copy seat limit - error
-
-```sql
-BEGIN TRANSACTION;
-
-INSERT INTO seat_limit (day, seats) values ('2021-05-06', 10);
-
--- core
-exec copySeatLimit @dateFrom = '2021-12-12', @dateTo = '2021-05-07'
-
-SELECT * from seat_limit;
-
-ROLLBACK TRANSACTION;
-```
-
-### Copy seat limit - any day to any day
-
-```sql
-BEGIN TRANSACTION;
-
-INSERT INTO seat_limit (day, seats) values ('2021-05-06', 10);
-
--- core
-exec copySeatLimit @dateFrom = '2021-05-06', @dateTo = '2021-05-07'
-
-SELECT * from seat_limit;
-
-ROLLBACK TRANSACTION;
-```
-
-### Copy seat limit - from previous day
-
-```sql
-BEGIN TRANSACTION;
-
-INSERT INTO seat_limit (day, seats) values ('2021-05-06', 10);
-
--- core
-exec copySeatLimitFromPreviousDay @date = '2021-05-07'
-
-SELECT * from seat_limit;
-
-ROLLBACK TRANSACTION;
-```
 
 ### Register product type
 
@@ -394,7 +350,52 @@ INSERT INTO reservation (order_id, duration_minutes, seats) values (@order_id, 9
 ROLLBACK TRANSACTION;
 ```
 
-### Make reservation
+### Copy seat limit - error
+
+```sql
+BEGIN TRANSACTION;
+
+INSERT INTO seat_limit (day, seats) values ('2021-05-06', 10);
+
+-- core
+exec copySeatLimit @dateFrom = '2021-12-12', @dateTo = '2021-05-07'
+
+SELECT * from seat_limit;
+
+ROLLBACK TRANSACTION;
+```
+
+### Copy seat limit - any day to any day
+
+```sql
+BEGIN TRANSACTION;
+
+INSERT INTO seat_limit (day, seats) values ('2021-05-06', 10);
+
+-- core
+exec copySeatLimit @dateFrom = '2021-05-06', @dateTo = '2021-05-07'
+
+SELECT * from seat_limit;
+
+ROLLBACK TRANSACTION;
+```
+
+### Copy seat limit - from previous day
+
+```sql
+BEGIN TRANSACTION;
+
+INSERT INTO seat_limit (day, seats) values ('2021-05-06', 10);
+
+-- core
+exec copySeatLimitFromPreviousDay @date = '2021-05-07'
+
+SELECT * from seat_limit;
+
+ROLLBACK TRANSACTION;
+```
+
+### Make reservation - error, not paid enough
 
 ```sql
 BEGIN TRANSACTION;
