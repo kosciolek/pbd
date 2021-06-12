@@ -1,6 +1,6 @@
 # AddProduct
 
-Adds a [product](product) to the list of products ordered for an [order](../Tables/order). 
+Adds a [product](../Tables/product) to the list of products ordered for an [order](../Tables/order). 
 
 Note this requires an appropriate [product availability](../Tables/product_availability) to be present.
 

@@ -7,8 +7,8 @@ sidebar_position: 2
 
 * `trCheckOnlyOneClientLinked_client` - Checks that for a given `id` inside [client](../Tables/client), there is only one client in either [client_person](../Tables/client_person) or [client_company](../Tables/client_company). Checks the client_person table.
 * `trCheckOnlyOneClientLinked_company` - Checks that for a given `id` inside [client](../Tables/client), there is only one client in either [client_person](../Tables/client_person) or [client_company](../Tables/client_company). Checks the client_company table.
-* `trProductAvailable` - Check that every [product](../Tables/product) [attached](../Tables/product_order) to an [order](../Tables/order) is [available](../Tables/product_availability) on that day.
-* `trSeafood_order_product` - Checks that all seafood is ordered on a [seafood-enabled](../Tables/seafood_enabled_early_const) day **and** it is ordered before the last preceding monday.
+* `trProductAvailable` - Check that every [product](../Tables/product) [attached](../Tables/order_product) to an [order](../Tables/order) is [available](../Tables/product_availability) on that day.
+* `trSeafood_order_product` - Checks that all seafood is ordered on a [seafood-enabled](../Tables/seafood_allowed_early_const) day **and** it is ordered before the last preceding monday.
 * `trFreeSeatsReservation` - Checks that for every [reservation](../Tables/reservation), at all points in time, there is enough [free seats](../Tables/seat_limit).
 * `trNoReservationForTakeaways_order` - Checks that takeaway orders have no reservation attached. Checks the order table.
 * `trNoReservationForTakeaways_reservation` - Checks that takeaway orders have no reservation attached. Checks the reservation table.

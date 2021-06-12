@@ -1,6 +1,6 @@
 # Price_table_daily
 
-Shows a list of products **ever available**, with `effective_price` including all present passive and [active discounts](../Table/discount) for the client **at the time of calling**.
+Shows a list of products **ever available**, with `effective_price` including all present passive and [active discounts](../Tables/discount) for the client **at the time of calling**.
 
 :::info
 Discounts are calculated at the time of calling.

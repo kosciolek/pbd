@@ -1,6 +1,6 @@
 # Price_table_daily_for_client
 
-Shows a list of today's products available today, with `effective_price` including all present passive and [active discounts](../Table/discount) for the client.
+Shows a list of today's products available today, with `effective_price` including all present passive and [active discounts](../Tables/discount) for the client.
 
 :::caution
 Due to performance reasons, queries should be made with a `WHERE` clause only for select clients.

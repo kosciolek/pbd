@@ -1,5 +1,11 @@
 # Schema
 
+## Visualization
+
+![](https://github.com/kosciolek/pbd/blob/master/schema-visualization.png?raw=true)
+
+## .sql
+
 The entire database schema, ready to be injected into an empty database.
 
 ```sql

@@ -24,4 +24,5 @@ A database to manage a restaurant.
 
 #### Grzegorz Nessler
 * **Project documentation**
+* Role definitions
 * Code cleanup, housekeeping
