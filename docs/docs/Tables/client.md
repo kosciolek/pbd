@@ -2,7 +2,7 @@
 
 Holds all client IDs, regardless of whether they're a [company](client_company) or a [person](client_person).
 
-Used to refer to a client, when the type of a client is not relevant.
+Used to refer to a client, when the type of the client is not relevant.
 
 ## Definition
 
