@@ -1,0 +1,1 @@
+# Total_spendings_per_client

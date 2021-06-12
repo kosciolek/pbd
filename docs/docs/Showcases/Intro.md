@@ -1,0 +1,1 @@
+ciekawe funkcje, triggery itp

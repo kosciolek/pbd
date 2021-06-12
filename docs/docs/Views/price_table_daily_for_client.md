@@ -1,0 +1,1 @@
+# Price_table_daily_for_client
