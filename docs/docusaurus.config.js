@@ -7,8 +7,8 @@ module.exports = {
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
   favicon: "img/favicon.ico",
-  organizationName: "jk-agh", // Usually your GitHub org/user name.
-  projectName: "docusaurus", // Usually your repo name.
+  organizationName: "kosciolek",
+  projectName: "pbd",
   themeConfig: {
     navbar: {
       title: "AGH PBD 2021",
@@ -24,7 +24,7 @@ module.exports = {
           label: "Docs"
         },
         {
-          href: "https://github.com/jk-agh/pbd/",
+          href: "https://github.com/kosciolek/pbd/",
           label: "GitHub",
           position: "right"
         }
@@ -33,7 +33,7 @@ module.exports = {
     footer: {
       style: "dark",
       links: [],
-      copyright: `Copyright © ${new Date().getFullYear()} Juliusz Kościołek`
+      copyright: `Copyright © ${new Date().getFullYear()} Juliusz Kościołek, Kamil Medoń, Grzegorz Nessler`
     }
   },
   presets: [
@@ -43,7 +43,7 @@ module.exports = {
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
           // Please change this to your repo.
-          editUrl: "https://github.com/jk-agh/pbd/"
+          editUrl: "https://github.com/kosciolek/pbd/tree/master/docs"
         },
         theme: {
           customCss: require.resolve("./src/css/custom.css")

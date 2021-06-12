@@ -119,11 +119,11 @@ create table [order]
     note                 varchar(2048),
 
     CONSTRAINT preferred_serve_time_bigger_than_date_placed CHECK (preferred_serve_time >= date_placed),
-    INDEX order_state NONCLUSTERED (state),                            -- funkcjonowanie restauracji
+    INDEX order_state NONCLUSTERED (state),                               -- funkcjonowanie restauracji
     INDEX order_preferred_serve_time NONCLUSTERED (preferred_serve_time), -- funkcjonowanie restauracji
-    INDEX order_date_placed NONCLUSTERED (date_placed),             -- funkcjonowanie restauracji
-    INDEX order_date_accepted NONCLUSTERED (date_accepted),             -- funkcjonowanie restauracji
-    INDEX order_date_rejected NONCLUSTERED (date_rejected),             -- funkcjonowanie restauracji
+    INDEX order_date_placed NONCLUSTERED (date_placed),                   -- funkcjonowanie restauracji
+    INDEX order_date_accepted NONCLUSTERED (date_accepted),               -- funkcjonowanie restauracji
+    INDEX order_date_rejected NONCLUSTERED (date_rejected),               -- funkcjonowanie restauracji
     INDEX order_date_completed NONCLUSTERED (date_completed),             -- funkcjonowanie restauracji
 );
 
@@ -197,7 +197,7 @@ CREATE OR
 ALTER FUNCTION dbo.getPrevMonday(@date DATE)
     RETURNS DATE AS
 BEGIN
-    RETURN dateadd(week,datediff(week,0, @date),0)
+    RETURN dateadd(week, datediff(week, 0, @date), 0)
 END
 GO;
 
@@ -447,7 +447,7 @@ GO;
 CREATE OR ALTER VIEW dbo.orders_per_client AS
 SELECT o.id                    AS "order_id",
        o.order_owner_id        as "client_id",
-       o.date_placed             as "date_placed",
+       o.date_placed           as "date_placed",
        SUM(op.effective_price) as "effective_price",
        o.state                 as "state"
 FROM [order] o
@@ -468,7 +468,7 @@ SELECT cs.name,
        cs.nip,
        DATEPART(Year, cs.date_placed)  as 'year',
        DATEPART(Month, cs.date_placed) as 'month',
-       SUM(effective_price)          as 'total_spendings'
+       SUM(effective_price)            as 'total_spendings'
 from company_spendings cs
 GROUP BY cs.nip, cs.name, DATEPART(Year, cs.date_placed), DATEPART(Month, cs.date_placed);
 GO;
@@ -487,11 +487,11 @@ where date = convert(date, getdate());
 go;
 
 CREATE OR ALTER VIEW dbo.product_report AS
-SELECT o.id               AS     "order_id",
-       p.id               as     "product_id",
-       pa.price           as     product_price,
-       op.effective_price as     "effective_price",
-       o.state            as     order_state,
+SELECT o.id               AS       "order_id",
+       p.id               as       "product_id",
+       pa.price           as       product_price,
+       op.effective_price as       "effective_price",
+       o.state            as       order_state,
        isSeafood,
        o.isTakeaway,
        p.tax_percent,
@@ -502,7 +502,8 @@ SELECT o.id               AS     "order_id",
 FROM [order] o
          FULL JOIN order_product op on o.id = op.order_id
          FULL JOIN product p ON op.product_id = p.id
-         FULL JOIN product_availability pa on p.id = pa.product_id AND pa.date = CONVERT(date, o.date_placed) where p.id is not null;
+         FULL JOIN product_availability pa on p.id = pa.product_id AND pa.date = CONVERT(date, o.date_placed)
+where p.id is not null;
 GO;
 
 
@@ -681,15 +682,15 @@ BEGIN
     -- todo: should fire on order and product as well?
 
 
-    if EXISTS(    SELECT o.id as date
+    if EXISTS(SELECT o.id as date
               FROM inserted op
-                  LEFT JOIN [order] o ON o.id = op.order_id
+                       LEFT JOIN [order] o ON o.id = op.order_id
                        LEFT JOIN product p ON op.product_id = p.id
               WHERE p.isSeafood = 1
                 AND (DATENAME(WEEKDAY, CONVERT(DATE, preferred_serve_time)) NOT IN
                      (SELECT day FROM seafood_allowed_early_const) OR
                      o.date_placed > dbo.getPrevMonday(o.preferred_serve_time))
-)
+        )
         BEGIN
             RAISERROR ('A seafood product may only be served on a seafood-enabled day and before the last monday (including).', 16, 1);
             ROLLBACK TRANSACTION;

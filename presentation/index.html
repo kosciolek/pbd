@@ -2,7 +2,7 @@
     <html>
     <head>
         <meta charset="UTF-8">
-        <title>Copy seat limit - error</title>
+        <title>Register product type</title>
         <style>
 </style>
         
@@ -24,9 +24,6 @@
     </head>
     <body class="vscode-body vscode-light">
         <ul>
-<li><a href="#copy-seat-limit---error">Copy seat limit - error</a></li>
-<li><a href="#copy-seat-limit---any-day-to-any-day">Copy seat limit - any day to any day</a></li>
-<li><a href="#copy-seat-limit---from-previous-day">Copy seat limit - from previous day</a></li>
 <li><a href="#register-product-type">Register product type</a></li>
 <li><a href="#register-product-type---invalid-tax">Register product type - invalid tax</a></li>
 <li><a href="#register-product-availability">Register product availability</a></li>
@@ -39,10 +36,13 @@
 <li><a href="#show-orders-awaiting-completion">Show orders awaiting completion</a></li>
 <li><a href="#list-products-available-today">List products available today</a></li>
 <li><a href="#make-reservation---error-no-seat-limit-set">Make reservation - error, no seat limit set</a></li>
-<li><a href="#make-reservation">Make reservation</a></li>
-<li><a href="#make-reservation---error-only-one-per-order">Make reservation - error, only one per order</a></li>
+<li><a href="#copy-seat-limit---error">Copy seat limit - error</a></li>
+<li><a href="#copy-seat-limit---any-day-to-any-day">Copy seat limit - any day to any day</a></li>
+<li><a href="#copy-seat-limit---from-previous-day">Copy seat limit - from previous day</a></li>
 <li><a href="#make-reservation---error-not-paid-enough">Make reservation - error, not paid enough</a></li>
-<li><a href="#make-reservation-1">Make reservation</a></li>
+<li><a href="#make-reservation---error-only-one-per-order">Make reservation - error, only one per order</a></li>
+<li><a href="#make-reservation---error-not-paid-enough-1">Make reservation - error, not paid enough</a></li>
+<li><a href="#make-reservation">Make reservation</a></li>
 <li><a href="#make-reservation---colliding">Make reservation - colliding</a></li>
 <li><a href="#make-active-discount---error-not-paid-enough--eligibility">Make active discount - error, not paid enough + eligibility</a></li>
 <li><a href="#make-discount">Make discount</a></li>
@@ -52,43 +52,9 @@
 <li><a href="#order-seafood---error-not-before-last-monday">Order seafood - error, not before last monday</a></li>
 <li><a href="#order-seafood">Order seafood</a></li>
 <li><a href="#active-discount-passive-discount-price-multipliers-price-table-daily-for-client">Active discount, passive discount, price multipliers, price table daily for client</a></li>
+<li><a href="#product-report---example">Product report - example</a></li>
+<li><a href="#check-saved-by-discounts">Check saved by discounts</a></li>
 </ul>
-<h3 id="copy-seat-limit---error">Copy seat limit - error</h3>
-<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
-
-<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> seat_limit (<span class="hljs-keyword">day</span>, seats) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;2021-05-06&#x27;</span>, <span class="hljs-number">10</span>);
-
-<span class="hljs-comment">-- core</span>
-exec copySeatLimit @dateFrom = &#x27;2021-12-12&#x27;, @dateTo = &#x27;2021-05-07&#x27;
-
-<span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">from</span> seat_limit;
-
-<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
-</div></code></pre>
-<h3 id="copy-seat-limit---any-day-to-any-day">Copy seat limit - any day to any day</h3>
-<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
-
-<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> seat_limit (<span class="hljs-keyword">day</span>, seats) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;2021-05-06&#x27;</span>, <span class="hljs-number">10</span>);
-
-<span class="hljs-comment">-- core</span>
-exec copySeatLimit @dateFrom = &#x27;2021-05-06&#x27;, @dateTo = &#x27;2021-05-07&#x27;
-
-<span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">from</span> seat_limit;
-
-<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
-</div></code></pre>
-<h3 id="copy-seat-limit---from-previous-day">Copy seat limit - from previous day</h3>
-<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
-
-<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> seat_limit (<span class="hljs-keyword">day</span>, seats) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;2021-05-06&#x27;</span>, <span class="hljs-number">10</span>);
-
-<span class="hljs-comment">-- core</span>
-exec copySeatLimitFromPreviousDay @date = &#x27;2021-05-07&#x27;
-
-<span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">from</span> seat_limit;
-
-<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
-</div></code></pre>
 <h3 id="register-product-type">Register product type</h3>
 <pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
 
@@ -374,7 +340,43 @@ exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniac
 
 <span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
 </div></code></pre>
-<h3 id="make-reservation">Make reservation</h3>
+<h3 id="copy-seat-limit---error">Copy seat limit - error</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> seat_limit (<span class="hljs-keyword">day</span>, seats) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;2021-05-06&#x27;</span>, <span class="hljs-number">10</span>);
+
+<span class="hljs-comment">-- core</span>
+exec copySeatLimit @dateFrom = &#x27;2021-12-12&#x27;, @dateTo = &#x27;2021-05-07&#x27;
+
+<span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">from</span> seat_limit;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="copy-seat-limit---any-day-to-any-day">Copy seat limit - any day to any day</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> seat_limit (<span class="hljs-keyword">day</span>, seats) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;2021-05-06&#x27;</span>, <span class="hljs-number">10</span>);
+
+<span class="hljs-comment">-- core</span>
+exec copySeatLimit @dateFrom = &#x27;2021-05-06&#x27;, @dateTo = &#x27;2021-05-07&#x27;
+
+<span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">from</span> seat_limit;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="copy-seat-limit---from-previous-day">Copy seat limit - from previous day</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
+
+<span class="hljs-keyword">INSERT</span> <span class="hljs-keyword">INTO</span> seat_limit (<span class="hljs-keyword">day</span>, seats) <span class="hljs-keyword">values</span> (<span class="hljs-string">&#x27;2021-05-06&#x27;</span>, <span class="hljs-number">10</span>);
+
+<span class="hljs-comment">-- core</span>
+exec copySeatLimitFromPreviousDay @date = &#x27;2021-05-07&#x27;
+
+<span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">from</span> seat_limit;
+
+<span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="make-reservation---error-not-paid-enough">Make reservation - error, not paid enough</h3>
 <pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
 
 exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
@@ -431,7 +433,7 @@ exec addProduct @order_id = @order_id, @product_id = &#x27;Super Ekstra Ziemniac
 
 <span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
 </div></code></pre>
-<h3 id="make-reservation---error-not-paid-enough">Make reservation - error, not paid enough</h3>
+<h3 id="make-reservation---error-not-paid-enough-1">Make reservation - error, not paid enough</h3>
 <pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
 
 exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
@@ -473,7 +475,7 @@ exec addProduct @order_id = @order1, @product_id = &#x27;Super Ekstra Ziemniaczk
 
 <span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
 </div></code></pre>
-<h3 id="make-reservation-1">Make reservation</h3>
+<h3 id="make-reservation">Make reservation</h3>
 <pre><code class="language-sql"><div><span class="hljs-keyword">BEGIN</span> <span class="hljs-keyword">TRANSACTION</span>;
 
 exec insert_client_person @first_name = &#x27;Jan&#x27;, @second_name = &#x27;Kowalski&#x27;, @phone_number = &#x27;789271345&#x27;
@@ -933,6 +935,21 @@ select * from price_multipliers;*/</span>
 
 <span class="hljs-comment">/*select * from price_table_daily_for_client;*/</span>
 <span class="hljs-keyword">ROLLBACK</span> <span class="hljs-keyword">TRANSACTION</span>;
+</div></code></pre>
+<h3 id="product-report---example">Product report - example</h3>
+<p>Sum of prices and count of all orders during lunch time (10-12)</p>
+<pre><code class="language-sql"><div><span class="hljs-keyword">select</span> <span class="hljs-keyword">month</span>, <span class="hljs-keyword">count</span>(product_price) <span class="hljs-keyword">as</span> <span class="hljs-string">&#x27;amount of orders&#x27;</span>, <span class="hljs-keyword">sum</span>(product_price) <span class="hljs-keyword">as</span> <span class="hljs-string">&#x27;total prices&#x27;</span> <span class="hljs-keyword">from</span> product_report <span class="hljs-keyword">where</span> <span class="hljs-keyword">year</span> = <span class="hljs-number">2018</span> <span class="hljs-keyword">and</span> <span class="hljs-keyword">hour</span> <span class="hljs-keyword">between</span> <span class="hljs-number">10</span> <span class="hljs-keyword">and</span> <span class="hljs-number">12</span> <span class="hljs-keyword">group</span> <span class="hljs-keyword">by</span> <span class="hljs-keyword">month</span> <span class="hljs-keyword">order</span> <span class="hljs-keyword">by</span> <span class="hljs-keyword">month</span> <span class="hljs-keyword">asc</span>;
+</div></code></pre>
+<h3 id="check-saved-by-discounts">Check saved by discounts</h3>
+<pre><code class="language-sql"><div><span class="hljs-keyword">select</span> o.id                                    <span class="hljs-keyword">as</span> <span class="hljs-string">&#x27;order_id&#x27;</span>,
+       <span class="hljs-keyword">sum</span>(pa.price)                           <span class="hljs-keyword">as</span> <span class="hljs-string">&#x27;raw_price_sum&#x27;</span>,
+       <span class="hljs-keyword">sum</span>(op.effective_price)                 <span class="hljs-keyword">as</span> <span class="hljs-string">&#x27;effective_price_sum&#x27;</span>,
+       <span class="hljs-keyword">sum</span>(pa.price) - <span class="hljs-keyword">sum</span>(op.effective_price) <span class="hljs-keyword">as</span> <span class="hljs-string">&#x27;saved_by_discounts&#x27;</span>
+<span class="hljs-keyword">from</span> [<span class="hljs-keyword">order</span>] o
+         <span class="hljs-keyword">left</span> <span class="hljs-keyword">join</span> order_product op <span class="hljs-keyword">on</span> o.id = op.order_id
+         <span class="hljs-keyword">left</span> <span class="hljs-keyword">join</span> product p <span class="hljs-keyword">on</span> p.id = op.product_id
+         <span class="hljs-keyword">left</span> <span class="hljs-keyword">join</span> product_availability pa <span class="hljs-keyword">on</span> p.id = pa.product_id <span class="hljs-keyword">and</span> <span class="hljs-keyword">convert</span>(<span class="hljs-built_in">date</span>, o.preferred_serve_time) = pa.date
+<span class="hljs-keyword">group</span> <span class="hljs-keyword">by</span> o.id;
 </div></code></pre>
 
     </body>
